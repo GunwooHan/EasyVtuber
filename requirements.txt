@@ -1,0 +1,4 @@
+# pytorch
+pyvirtualcam
+mediapipe
+opencv-python
