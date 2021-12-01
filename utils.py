@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+
 def preprocessing_image(image):
     np_image = np.array(image) / 255
     clipped_image = np.clip(np_image, 0, 1)
@@ -27,3 +28,7 @@ def postprocessing_image(image):
     rgba_image = np.concatenate([rgb_image, alpha_image[..., np.newaxis]], axis=2)
     rgba_image = rgba_image * 255
     return rgba_image.astype(np.uint8)
+
+
+def get_distance(a, b):
+    return np.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
