@@ -1,5 +1,7 @@
 pretrained
 character
+src
+dst
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
