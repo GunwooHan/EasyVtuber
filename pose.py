@@ -1,9 +1,5 @@
-from PIL import Image
-
 import cv2
-import torch
 import numpy as np
-import mediapipe as mp
 from mediapipe.python.solutions.face_mesh_connections import FACEMESH_CONTOURS
 from mediapipe.python.solutions.face_mesh_connections import FACEMESH_FACE_OVAL
 from mediapipe.python.solutions.face_mesh_connections import FACEMESH_IRISES
@@ -16,7 +12,11 @@ from mediapipe.python.solutions.face_mesh_connections import FACEMESH_RIGHT_EYEB
 from mediapipe.python.solutions.face_mesh_connections import FACEMESH_RIGHT_IRIS
 from mediapipe.python.solutions.face_mesh_connections import FACEMESH_TESSELATION
 
+from facial_points import MOUTH_TOP, MOUTH_BOTTOM, MOUTH_LEFT1, MOUTH_LEFT2, MOUTH_RIGHT
+from facial_points import IRIS_L_TOP, IRIS_L_BOTTOM, IRIS_L_LEFT, IRIS_L_RIGHT
+from facial_points import IRIS_R_TOP, IRIS_R_BOTTOM, IRIS_R_LEFT, IRIS_R_RIGHT
 from utils import get_distance
+
 
 # pose vector index ------------------------------------------
 # wink                          0, 1
@@ -25,8 +25,8 @@ from utils import get_distance
 # relaxed                       6, 7
 # unimpressed                   8, 9
 # iris Shrinkage L              12
-# iris Shrinkage R              13
-# mouth aaa                     14
+# iris Shrinkage R              MOUTH_TOP
+# mouth aaa                     MOUTH_BOTTOM
 # mouth iii                     15
 # mouth uuu                     16
 # mouth eee                     17
@@ -49,6 +49,8 @@ class Landmark:
 
     def __repr__(self):
         return f'x: {self.x}\ny: {self.y}\nz: {self.z}'
+
+# def set_pose(pose, pose_vector)
 
 
 def get_iris_center_point(landmarks, side=None):
@@ -97,36 +99,35 @@ def get_pose(facial_landmarks, debug_image=None):
     iris_r_center = get_iris_center_point(facial_landmarks, 'r')
     iris_l_center = get_iris_center_point(facial_landmarks, 'l')
 
-
-    mouth_h = facial_landmarks[13].y - facial_landmarks[14].y
-    mouth_w = facial_landmarks[78].x - (facial_landmarks[409].x + facial_landmarks[375].x) / 2
+    mouth_h = facial_landmarks[MOUTH_TOP].y - facial_landmarks[MOUTH_BOTTOM].y
+    mouth_w = facial_landmarks[MOUTH_RIGHT].x - (facial_landmarks[MOUTH_LEFT1].x + facial_landmarks[MOUTH_LEFT2].x) / 2
     mouth_ratio = mouth_h / mouth_w
 
     x_angle = np.arctan2(facial_landmarks[197].y - facial_landmarks[9].y, facial_landmarks[197].z - facial_landmarks[9].z)
-    y_angle = np.arctan2(facial_landmarks[386].z - facial_landmarks[159].z, facial_landmarks[386].x - facial_landmarks[159].x)
+    y_angle = np.arctan2(facial_landmarks[IRIS_L_TOP].z - facial_landmarks[IRIS_R_TOP].z, facial_landmarks[IRIS_L_TOP].x - facial_landmarks[IRIS_R_TOP].x)
     z_angle = np.arctan2(facial_landmarks[9].y - facial_landmarks[152].y, facial_landmarks[9].x - facial_landmarks[152].x)
 
-    iris_rotation_l_h = get_distance(facial_landmarks[386], facial_landmarks[374])
-    iris_rotation_l_w = get_distance(facial_landmarks[382], facial_landmarks[263])
-    iris_rotation_r_h = get_distance(facial_landmarks[159], facial_landmarks[145])
-    iris_rotation_r_w = get_distance(facial_landmarks[33], facial_landmarks[155])
+    iris_rotation_l_h = get_distance(facial_landmarks[IRIS_L_TOP], facial_landmarks[IRIS_L_BOTTOM])
+    iris_rotation_l_w = get_distance(facial_landmarks[IRIS_L_RIGHT], facial_landmarks[IRIS_L_LEFT])
+    iris_rotation_r_h = get_distance(facial_landmarks[IRIS_R_TOP], facial_landmarks[IRIS_R_BOTTOM])
+    iris_rotation_r_w = get_distance(facial_landmarks[IRIS_R_RIGHT], facial_landmarks[IRIS_R_LEFT])
 
     iris_rotation_l_h_temp = np.sqrt(
-        (iris_l_center.x - facial_landmarks[386].x) ** 2 + (iris_l_center.y - facial_landmarks[386].y) ** 2)
+        (iris_l_center.x - facial_landmarks[IRIS_L_TOP].x) ** 2 + (iris_l_center.y - facial_landmarks[IRIS_L_TOP].y) ** 2)
     iris_rotation_l_w_temp = np.sqrt(
-        (iris_l_center.x - facial_landmarks[382].x) ** 2 + (iris_l_center.y - facial_landmarks[382].y) ** 2)
+        (iris_l_center.x - facial_landmarks[IRIS_L_RIGHT].x) ** 2 + (iris_l_center.y - facial_landmarks[IRIS_L_RIGHT].y) ** 2)
     iris_rotation_r_h_temp = np.sqrt(
-        (iris_r_center.x - facial_landmarks[159].x) ** 2 + (iris_r_center.y - facial_landmarks[159].y) ** 2)
+        (iris_r_center.x - facial_landmarks[IRIS_R_TOP].x) ** 2 + (iris_r_center.y - facial_landmarks[IRIS_R_TOP].y) ** 2)
     iris_rotation_r_w_temp = np.sqrt(
-        (iris_r_center.x - facial_landmarks[33].x) ** 2 + (iris_r_center.y - facial_landmarks[33].y) ** 2)
+        (iris_r_center.x - facial_landmarks[IRIS_R_RIGHT].x) ** 2 + (iris_r_center.y - facial_landmarks[IRIS_R_RIGHT].y) ** 2)
 
     eye_x_ratio = ((iris_rotation_l_w_temp / iris_rotation_l_w + iris_rotation_r_w_temp / iris_rotation_r_w) - 1) * 3
     eye_y_ratio = ((iris_rotation_l_h_temp / iris_rotation_l_h + iris_rotation_r_h_temp / iris_rotation_r_h) - 1) * 3
 
-    eye_l_h_temp = 1 - 2 * (facial_landmarks[145].y - facial_landmarks[159].y) / (
-                facial_landmarks[155].x - facial_landmarks[33].x)
-    eye_r_h_temp = 1 - 2 * (facial_landmarks[374].y - facial_landmarks[386].y) / (
-                facial_landmarks[263].x - facial_landmarks[382].x)
+    eye_l_h_temp = 1 - 2 * (facial_landmarks[IRIS_R_BOTTOM].y - facial_landmarks[IRIS_R_TOP].y) / (
+                facial_landmarks[IRIS_R_LEFT].x - facial_landmarks[IRIS_R_RIGHT].x)
+    eye_r_h_temp = 1 - 2 * (facial_landmarks[IRIS_L_BOTTOM].y - facial_landmarks[IRIS_L_TOP].y) / (
+                facial_landmarks[IRIS_L_LEFT].x - facial_landmarks[IRIS_L_RIGHT].x)
 
     if debug_image is not None:
         h, w, c = debug_image.shape
@@ -143,29 +144,29 @@ def get_pose(facial_landmarks, debug_image=None):
 
         # draw eye edge2iris
         debug_image = cv2.line(debug_image, [int(iris_r_center.x * w), int(iris_r_center.y * h)],
-                 [int(facial_landmarks[33].x * w), int(facial_landmarks[33].y * h)], (0, 255, 128), 1)
+                 [int(facial_landmarks[IRIS_R_RIGHT].x * w), int(facial_landmarks[IRIS_R_RIGHT].y * h)], (0, 255, 128), 1)
         debug_image = cv2.line(debug_image, [int(iris_r_center.x * w), int(iris_r_center.y * h)],
-                 [int(facial_landmarks[145].x * w), int(facial_landmarks[145].y * h)], (0, 255, 128), 1)
+                 [int(facial_landmarks[IRIS_R_BOTTOM].x * w), int(facial_landmarks[IRIS_R_BOTTOM].y * h)], (0, 255, 128), 1)
         debug_image = cv2.line(debug_image, [int(iris_r_center.x * w), int(iris_r_center.y * h)],
-                 [int(facial_landmarks[155].x * w), int(facial_landmarks[155].y * h)], (0, 255, 128), 1)
+                 [int(facial_landmarks[IRIS_R_LEFT].x * w), int(facial_landmarks[IRIS_R_LEFT].y * h)], (0, 255, 128), 1)
         debug_image = cv2.line(debug_image, [int(iris_r_center.x * w), int(iris_r_center.y * h)],
-                 [int(facial_landmarks[159].x * w), int(facial_landmarks[159].y * h)], (0, 255, 128), 1)
+                 [int(facial_landmarks[IRIS_R_TOP].x * w), int(facial_landmarks[IRIS_R_TOP].y * h)], (0, 255, 128), 1)
 
         debug_image = cv2.line(debug_image, [int(iris_l_center.x * w), int(iris_l_center.y * h)],
-                 [int(facial_landmarks[382].x * w), int(facial_landmarks[382].y * h)], (255, 128, 0), 1)
+                 [int(facial_landmarks[IRIS_L_RIGHT].x * w), int(facial_landmarks[IRIS_L_RIGHT].y * h)], (255, 128, 0), 1)
         debug_image = cv2.line(debug_image, [int(iris_l_center.x * w), int(iris_l_center.y * h)],
-                 [int(facial_landmarks[386].x * w), int(facial_landmarks[386].y * h)], (255, 128, 0), 1)
+                 [int(facial_landmarks[IRIS_L_TOP].x * w), int(facial_landmarks[IRIS_L_TOP].y * h)], (255, 128, 0), 1)
         debug_image = cv2.line(debug_image, [int(iris_l_center.x * w), int(iris_l_center.y * h)],
-                 [int(facial_landmarks[263].x * w), int(facial_landmarks[263].y * h)], (255, 128, 0), 1)
+                 [int(facial_landmarks[IRIS_L_LEFT].x * w), int(facial_landmarks[IRIS_L_LEFT].y * h)], (255, 128, 0), 1)
         debug_image = cv2.line(debug_image, [int(iris_l_center.x * w), int(iris_l_center.y * h)],
-                 [int(facial_landmarks[374].x * w), int(facial_landmarks[374].y * h)], (255, 128, 0), 1)
+                 [int(facial_landmarks[IRIS_L_BOTTOM].x * w), int(facial_landmarks[IRIS_L_BOTTOM].y * h)], (255, 128, 0), 1)
 
         # draw mouth
-        debug_image = cv2.line(debug_image, [int((facial_landmarks[409].x + facial_landmarks[375].x) / 2 * w), int((facial_landmarks[409].y + facial_landmarks[375].y) / 2 * h)],
-                 [int(facial_landmarks[78].x * w), int(facial_landmarks[78].y * h)], (255, 64, 0), 1)
+        debug_image = cv2.line(debug_image, [int((facial_landmarks[MOUTH_LEFT1].x + facial_landmarks[MOUTH_LEFT2].x) / 2 * w), int((facial_landmarks[MOUTH_LEFT1].y + facial_landmarks[MOUTH_LEFT2].y) / 2 * h)],
+                 [int(facial_landmarks[MOUTH_RIGHT].x * w), int(facial_landmarks[MOUTH_RIGHT].y * h)], (255, 64, 0), 1)
 
-        debug_image = cv2.line(debug_image, [int(facial_landmarks[13].x * w), int(facial_landmarks[13].y * h)],
-                 [int(facial_landmarks[14].x * w), int(facial_landmarks[14].y * h)], (255, 64, 0), 1)
+        debug_image = cv2.line(debug_image, [int(facial_landmarks[MOUTH_TOP].x * w), int(facial_landmarks[MOUTH_TOP].y * h)],
+                 [int(facial_landmarks[MOUTH_BOTTOM].x * w), int(facial_landmarks[MOUTH_BOTTOM].y * h)], (255, 64, 0), 1)
 
         # draw mouth
         debug_image = cv2.line(debug_image, [int(facial_landmarks[197].x * w), int(facial_landmarks[197].y * h)],
@@ -177,100 +178,6 @@ def get_pose(facial_landmarks, debug_image=None):
         cv2.putText(debug_image, f'y angle : {y_angle:.2f}', (10, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
         cv2.putText(debug_image, f'z angle : {z_angle:.2f}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
 
-        return (eye_l_h_temp, eye_r_h_temp, mouth_ratio, eye_y_ratio, eye_x_ratio, y_angle, z_angle, x_angle), debug_image
+        return (eye_l_h_temp, eye_r_h_temp, mouth_ratio, eye_y_ratio, eye_x_ratio, x_angle , y_angle, z_angle), debug_image
     else:
-        return eye_l_h_temp, eye_r_h_temp, mouth_ratio, eye_y_ratio, eye_x_ratio, y_angle, z_angle, x_angle
-
-
-if __name__ == '__main__':
-    from utils import preprocessing_image, postprocessing_image, get_distance
-    from models import TalkingAnimeLight
-
-    model = TalkingAnimeLight().cuda()
-    model = model.eval()
-    model = model.half()
-    img = Image.open("character/0018.png")
-    img = img.resize((256, 256))
-    input_image = preprocessing_image(img).unsqueeze(0)
-
-    mp_facemesh = mp.solutions.face_mesh
-
-    cap = cv2.VideoCapture(0)
-
-    facemesh = mp_facemesh.FaceMesh(refine_landmarks=True)
-
-    ret, frame = cap.read()
-
-    if ret is None:
-        raise Exception("Can't find Camera")
-
-    input_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = facemesh.process(input_frame)
-
-    if results.multi_face_landmarks is None:
-        raise Exception("Fail to initailize parameters")
-
-    facial_landmarks = results.multi_face_landmarks[0].landmark
-
-    mouth_eye_vector = torch.empty(1, 27)
-    pose_vector = torch.empty(1, 3)
-
-    input_image = input_image.half()
-    mouth_eye_vector = mouth_eye_vector.half()
-    pose_vector = pose_vector.half()
-
-    input_image = input_image.cuda()
-    mouth_eye_vector = mouth_eye_vector.cuda()
-    pose_vector = pose_vector.cuda()
-
-    pose_queue = []
-
-    while cap.isOpened():
-        ret, frame = cap.read()
-        input_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = facemesh.process(input_frame)
-
-        if results.multi_face_landmarks is None:
-            continue
-
-        facial_landmarks = results.multi_face_landmarks[0].landmark
-
-        pose, debug_image = get_pose(facial_landmarks, frame)
-
-        if len(pose_queue) < 3:
-            pose_queue.append(pose)
-            pose_queue.append(pose)
-            pose_queue.append(pose)
-        else:
-            pose_queue.pop(0)
-            pose_queue.append(pose)
-
-        np_pose = np.average(np.array(pose_queue), axis=0, weights=[0.7, 0.2, 0.1])
-
-        eye_l_h_temp = np_pose[0]
-        eye_r_h_temp = np_pose[1]
-        mouth_ratio = np_pose[2]
-        eye_y_ratio = np_pose[3]
-        eye_x_ratio = np_pose[4]
-        y_angle = np_pose[5]
-        z_angle = np_pose[6]
-        x_angle = np_pose[7]
-
-        mouth_eye_vector[0, :] = 0
-
-        mouth_eye_vector[0, 2] = eye_l_h_temp
-        mouth_eye_vector[0, 3] = eye_r_h_temp
-
-        mouth_eye_vector[0, 14] = mouth_ratio * 1.5
-
-        mouth_eye_vector[0, 25] = eye_y_ratio
-        mouth_eye_vector[0, 26] = eye_x_ratio
-
-        pose_vector[0, 0] = (x_angle - 1.5) * 1.6
-        pose_vector[0, 1] = y_angle * 2.0  # temp weight
-        pose_vector[0, 2] = (1.5 + z_angle) * 2  # temp weight
-
-        output_image = model(input_image, mouth_eye_vector, pose_vector)
-        cv2.imshow("frame", cv2.cvtColor(postprocessing_image(output_image.cpu()), cv2.COLOR_RGBA2BGRA))
-        cv2.imshow("camera", debug_image)
-        cv2.waitKey(1)
+        return eye_l_h_temp, eye_r_h_temp, mouth_ratio, eye_y_ratio, eye_x_ratio,x_angle, y_angle, z_angle

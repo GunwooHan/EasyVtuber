@@ -90,9 +90,9 @@ def main():
         mouth_ratio = np_pose[2]
         eye_y_ratio = np_pose[3]
         eye_x_ratio = np_pose[4]
-        y_angle = np_pose[5]
-        z_angle = np_pose[6]
-        x_angle = np_pose[7]
+        x_angle = np_pose[5]
+        y_angle = np_pose[6]
+        z_angle = np_pose[7]
 
         mouth_eye_vector[0, :] = 0
 
@@ -106,7 +106,7 @@ def main():
 
         pose_vector[0, 0] = (x_angle - 1.5) * 1.6
         pose_vector[0, 1] = y_angle * 2.0  # temp weight
-        pose_vector[0, 2] = (1.5 + z_angle) * 2  # temp weight
+        pose_vector[0, 2] = (z_angle + 1.5) * 2  # temp weight
 
         output_image = model(input_image, mouth_eye_vector, pose_vector)
 
