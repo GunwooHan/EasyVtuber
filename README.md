@@ -6,8 +6,9 @@
 - 악세사리는 어느정도 추가해도 잘 작동해요!
 - 안타깝게도 RTX 2070 미만에서는 실시간으로 잘 작동하지 않을 수도 있어요 ㅠㅠ
 
+<br/><br/>
 
-## 
+## Demo
 ![](assets/sample_luda_debug.gif)
 ![](assets/sample_zoom.gif)
 
@@ -43,8 +44,10 @@
      - 1명의 인간형 캐릭터일 것
      - 캐릭터가 정면을 볼 것
      - 캐릭터의 머리가 128 x 128 pixel 내에 들어올 것 (기본적으로 256 x 256으로 resize되기 때문에 256 x 256 기준 128x128 안에 들어와야함)
-
-    <img src="./assets/img.png" alt="Example image is refenced by TalkingHeadAnime2" width="50%" height="50%"/>
+    
+    <p align="center">
+        <img src="./assets/img.png" alt="Example image is refenced by TalkingHeadAnime2" width="50%" height="50%"/>
+    </p>
 
 
 5.`python main.py --webcam_output`
