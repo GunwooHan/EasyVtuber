@@ -39,9 +39,10 @@
      - 1명의 인간형 캐릭터일 것
      - 캐릭터가 정면을 볼 것
      - 캐릭터의 머리가 128 x 128 pixel 내에 들어올 것 (기본적으로 256 x 256으로 resize되기 때문에 256 x 256 기준 128x128 안에 들어와야함)
-    ![character image example](assets/img.png)
-     - Example image is refenced by TalkingHeadAnime2
-5. `python main.py --webcam_output`
+
+    <img src="./assets/img.png" alt="Example image is refenced by TalkingHeadAnime2" width="100%" height="100%"/>
+
+5.`python main.py --webcam_output`
    - 실제 facial feature가 어떻게 잡히는지 보고 싶다면 `--debug` 옵션을 추가하여 실행해주세요
 
 ## How to make Custom Character
@@ -93,5 +94,5 @@
 - 늦은 밤 README 샘플 영상 만들기 위해 도와주신 [성민석 멘토님](https://github.com/minsuk-sung), [박성호](https://github.com/naem1023), [박범수](https://github.com/hanlyang0522) 캠퍼님 감사합니다!
 
 ## Acknowledgements
-- EasyVtuber는 [TalkingHeadAnime2](<github.com/pkhungurn/talking-head-anime-2-demo>)를 기반으로 제작되었습니다. 
+- EasyVtuber는 [TalkingHeadAnime2](<https://github.com/pkhungurn/talking-head-anime-2-demo>)를 기반으로 제작되었습니다. 
 - tha2 folder의 source와 pretrained model file은 원저작자 repo의 Liscense를 확인하고 사용하시기 바랍니다.
