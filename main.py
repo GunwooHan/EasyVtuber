@@ -18,11 +18,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--debug', action='store_true')
 parser.add_argument('--input', type=str, default='cam')
 parser.add_argument('--character', type=str, default='0001')
-parser.add_argument('--output_dir', type=str, default=f'')
+parser.add_argument('--output_dir', type=str, default=f'dst')
 parser.add_argument('--output_webcam', action='store_true')
 args = parser.parse_args()
 
 
+@torch.no_grad()
 def main():
     model = TalkingAnimeLight().cuda()
     model = model.eval()
@@ -111,8 +112,11 @@ def main():
         output_image = model(input_image, mouth_eye_vector, pose_vector)
 
         if args.debug:
-            cv2.imshow("frame", cv2.cvtColor(postprocessing_image(output_image.cpu()), cv2.COLOR_RGBA2BGRA))
-            cv2.imshow("camera", debug_image)
+            output_frame = cv2.cvtColor(postprocessing_image(output_image.cpu()), cv2.COLOR_RGBA2BGR)
+            resized_frame = cv2.resize(output_frame, (np.min(debug_image.shape[:2]), np.min(debug_image.shape[:2])))
+            output_frame = np.concatenate([debug_image, resized_frame], axis=1)
+            cv2.imshow("frame", output_frame)
+            # cv2.imshow("camera", debug_image)
             cv2.waitKey(1)
         if args.input != 'cam':
             cv2.imwrite(os.path.join('dst', args.character, args.output_dir, f'{frame_count:04d}.jpeg'))
