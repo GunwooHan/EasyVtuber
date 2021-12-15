@@ -22,7 +22,7 @@
 - ※ 이 프로젝트는 사용 전 OBS 설치가 필수입니다
 - 아래 설치 순서를 __꼭__ 지켜주세요!
 
-1. OBS studio 설치 (<https://obsproject.com/ko>)
+1. [OBS studio 설치](<https://obsproject.com/ko>)
    - OBS virtualcam을 사용하기 위해서 먼저 OBS Studio를 설치해야합니다
 2. ```pip install -r requirements.txt```
    - OBS virtualcam을 설치되어있어야 requirements에 포함된 pyvirtualcam이 정상적으로 설치되어 사용할 수 있습니다
@@ -49,10 +49,10 @@
    - 되도록이면 위의 4가지 조건을 맞춰주세요!
 ![google search](assets/01_sample_search.gif)
 2. 찾은 이미지에서 캐릭터 얼굴이 중앙으로 가도록 가로세로 1:1 비율로 이미지를 잘라주세요!
-   - [이미지 잘라내기 사이트](iloveimg.com/ko/crop-image) 광고아님 X
+   - [이미지 잘라내기 사이트](https://iloveimg.com/ko/crop-image) 광고아님 X
 ![crop image](assets/02_sample_crop.gif)
 3. 이미지 배경을 제거해서 alpha 채널로 만들어 주세요!
-   - [배경제거 사이트](remove.bg/ko) 광고아님 X
+   - [배경제거 사이트](https://remove.bg/ko) 광고아님 X
 ![google search](assets/03_sample_remove_backgroud.gif)
 4. 완성!
    - character folder에 이미지를 넣고 `python main.py --output_webcam --character (.png_제외한_캐릭터파일_이름)` 실행!
@@ -89,7 +89,7 @@
 - [ ] Automation of Making Drivable Character 
 
 ## Thanks to
-- `이루다` 이미지 사용을 허락해주신 [스캐터랩 이루다팀](scatterlab.co.kr), `똘순이 MK1` 이미지 사용을 허락해주신 [순수한 불순물](pixiv.net/users/21097691)님 감사합니다!
+- `이루다` 이미지 사용을 허락해주신 [스캐터랩 이루다팀](https://scatterlab.co.kr), `똘순이 MK1` 이미지 사용을 허락해주신 [순수한 불순물](https://pixiv.net/users/21097691) 님 감사합니다!
 - 늦은 밤 README 샘플 영상 만들기 위해 도와주신 [성민석 멘토님](https://github.com/minsuk-sung), [박성호](https://github.com/naem1023), [박범수](https://github.com/hanlyang0522) 캠퍼님 감사합니다!
 
 ## Acknowledgements
