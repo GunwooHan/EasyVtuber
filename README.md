@@ -65,7 +65,7 @@
    - [이미지 잘라내기 사이트](https://iloveimg.com/ko/crop-image) 광고아님 X
 ![crop image](assets/02_sample_crop.gif)
 <br/><br/>
-3. 이미지 배경을 제거해서 alpha 채널로 만들어 주세요!
+3. 이미지 배경을 제거해서 alpha 채널을 만들어 주세요!
    - [배경제거 사이트](https://remove.bg/ko) 광고아님 X
 ![google search](assets/03_sample_remove_backgroud.gif)
 <br/><br/>
@@ -110,8 +110,7 @@
 <br/><br/>
 
 ## Thanks to
-- `이루다` 이미지 사용을 허락해주신 [스캐터랩 이루다팀](https://scatterlab.co.kr), `똘순이 MK1` 이미지 사용을 허락해주신 [순수한 불순물](https://pixiv.net/users/21097691) 님 감사합니다!
-- 늦은 밤 README 샘플 영상 만들기 위해 도와주신 [성민석 멘토님](https://github.com/minsuk-sung), [박성호](https://github.com/naem1023), [박범수](https://github.com/hanlyang0522) 캠퍼님 감사합니다!
+- `이루다` 이미지 사용을 허락해주신 [스캐터랩 이루다팀](https://scatterlab.co.kr), `똘순이 MK1` 이미지 사용을 허락해주신 [순수한 불순물](https://pixiv.net/users/21097691) 님, 늦은 밤까지 README 샘플 영상 만들기 위해 도와주신 [성민석 멘토님](https://github.com/minsuk-sung), [박성호](https://github.com/naem1023), [박범수](https://github.com/hanlyang0522) 캠퍼님, 프로젝트 방향성 조언을 해주신 [김보찬 멘토님](https://github.com/MoMentum99) 모두 감사합니다!
 
 <br/><br/>
 
