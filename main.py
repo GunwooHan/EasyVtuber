@@ -22,10 +22,11 @@ parser.add_argument('--output_dir', type=str, default=f'dst')
 parser.add_argument('--output_webcam', action='store_true')
 args = parser.parse_args()
 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 @torch.no_grad()
 def main():
-    model = TalkingAnimeLight().cuda()
+    model = TalkingAnimeLight().to(device)
     model = model.eval()
     model = model.half()
     img = Image.open(f"character/{args.character}.png")
@@ -55,9 +56,9 @@ def main():
     mouth_eye_vector = mouth_eye_vector.half()
     pose_vector = pose_vector.half()
 
-    input_image = input_image.cuda()
-    mouth_eye_vector = mouth_eye_vector.cuda()
-    pose_vector = pose_vector.cuda()
+    input_image = input_image.to(device)
+    mouth_eye_vector = mouth_eye_vector.to(device)
+    pose_vector = pose_vector.to(device)
 
     pose_queue = []
 
