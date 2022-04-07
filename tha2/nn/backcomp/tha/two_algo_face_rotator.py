@@ -60,7 +60,7 @@ class TwoAlgoFaceRotator(BatchInputModule):
         identity = torch.Tensor([[1, 0, 0], [0, 1, 0]]).to(device).unsqueeze(0).repeat(n, 1, 1)
         base_grid = affine_grid(identity, [n, c, h, w], align_corners=self.align_corners)
         grid = base_grid + grid_change
-        resampled = grid_sample(image, grid.half(), mode='bilinear', padding_mode='border', align_corners=self.align_corners)
+        resampled = grid_sample(image, grid, mode='bilinear', padding_mode='border', align_corners=self.align_corners)
 
         # return [color_changed, resampled, color_change, alpha_mask, original_grid_change]
         return [color_changed, resampled]

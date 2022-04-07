@@ -28,7 +28,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 def main():
     model = TalkingAnimeLight().to(device)
     model = model.eval()
-    model = model.half()
+    model = model
     img = Image.open(f"character/{args.character}.png")
     img = img.resize((256, 256))
     input_image = preprocessing_image(img).unsqueeze(0)
@@ -52,9 +52,9 @@ def main():
     mouth_eye_vector = torch.empty(1, 27)
     pose_vector = torch.empty(1, 3)
 
-    input_image = input_image.half()
-    mouth_eye_vector = mouth_eye_vector.half()
-    pose_vector = pose_vector.half()
+    # input_image = input_image.half()
+    # mouth_eye_vector = mouth_eye_vector.half()
+    # pose_vector = pose_vector.half()
 
     input_image = input_image.to(device)
     mouth_eye_vector = mouth_eye_vector.to(device)

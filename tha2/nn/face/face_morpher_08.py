@@ -145,7 +145,7 @@ class FaceMorpher08(BatchInputModule):
             feature = block(feature)
 
         iris_mouth_grid_change = self.iris_mouth_grid_change(feature)
-        iris_mouth_image_0 = self.apply_grid_change(iris_mouth_grid_change.half(), image)
+        iris_mouth_image_0 = self.apply_grid_change(iris_mouth_grid_change, image)
         iris_mouth_color_change = self.iris_mouth_color_change(feature)
         iris_mouth_alpha = self.iris_mouth_alpha(feature)
         iris_mouth_image_1 = self.apply_color_change(iris_mouth_alpha, iris_mouth_color_change, iris_mouth_image_0)
@@ -177,7 +177,7 @@ class FaceMorpher08(BatchInputModule):
         identity = torch.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], device=device).unsqueeze(0).repeat(n, 1, 1)
         base_grid = affine_grid(identity, [n, c, h, w], align_corners=False)
         grid = base_grid + grid_change
-        resampled_image = grid_sample(image, grid.half(), mode='bilinear', padding_mode='border', align_corners=False)
+        resampled_image = grid_sample(image, grid, mode='bilinear', padding_mode='border', align_corners=False)
         return resampled_image
 
     def apply_color_change(self, alpha, color_change, image: Tensor) -> Tensor:
