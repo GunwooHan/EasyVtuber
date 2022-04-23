@@ -1,4 +1,3 @@
-
 import argparse
 
 import cv2
@@ -33,6 +32,7 @@ args = parser.parse_args()
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+
 def create_default_blender_data():
     data = {}
 
@@ -56,6 +56,7 @@ def create_default_blender_data():
 
     return data
 
+
 class ClientProcess(Process):
     def __init__(self):
         super().__init__()
@@ -63,6 +64,7 @@ class ClientProcess(Process):
         self.should_terminate = Value('b', False)
         self.address = "0.0.0.0"
         self.port = 50002
+        self.perf_time = 0
 
     def run(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -82,6 +84,10 @@ class ClientProcess(Process):
             socket_string = socket_bytes.decode("utf-8")
             blender_data = json.loads(socket_string)
             data = self.convert_from_blender_data(blender_data)
+            cur_time = time.perf_counter()
+            fps = 1 / (cur_time - self.perf_time)
+            self.perf_time = cur_time
+            print(fps)
             try:
                 self.queue.put_nowait(data)
             except queue.Full:
@@ -132,6 +138,7 @@ class ClientProcess(Process):
 
         return data
 
+
 @torch.no_grad()
 def main():
     model = TalkingAnimeLight().to(device)
@@ -178,7 +185,7 @@ def main():
         # ret, frame = cap.read()
         # input_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # results = facemesh.process(input_frame)
-        tic=time.perf_counter()
+        tic = time.perf_counter()
 
         try:
 
@@ -222,19 +229,19 @@ def main():
         eye_l_h_temp = ifacialmocap_pose[EYE_BLINK_LEFT]
         eye_r_h_temp = ifacialmocap_pose[EYE_BLINK_RIGHT]
         mouth_ratio = (ifacialmocap_pose[JAW_OPEN] - 0.10)
-        x_angle = -ifacialmocap_pose[HEAD_BONE_X]*1.5+1.57
+        x_angle = -ifacialmocap_pose[HEAD_BONE_X] * 1.5 + 1.57
         y_angle = -ifacialmocap_pose[HEAD_BONE_Y]
-        z_angle = ifacialmocap_pose[HEAD_BONE_Z]-1.57
+        z_angle = ifacialmocap_pose[HEAD_BONE_Z] - 1.57
 
         eye_x_ratio = (ifacialmocap_pose[EYE_LOOK_IN_LEFT] -
-                          ifacialmocap_pose[EYE_LOOK_OUT_LEFT] -
-                          ifacialmocap_pose[EYE_LOOK_IN_RIGHT] +
-                          ifacialmocap_pose[EYE_LOOK_OUT_RIGHT]) / 2.0 / 0.75
+                       ifacialmocap_pose[EYE_LOOK_OUT_LEFT] -
+                       ifacialmocap_pose[EYE_LOOK_IN_RIGHT] +
+                       ifacialmocap_pose[EYE_LOOK_OUT_RIGHT]) / 2.0 / 0.75
 
         eye_y_ratio = (ifacialmocap_pose[EYE_LOOK_UP_LEFT]
-                          + ifacialmocap_pose[EYE_LOOK_UP_RIGHT]
-                          - ifacialmocap_pose[EYE_LOOK_DOWN_RIGHT]
-                          + ifacialmocap_pose[EYE_LOOK_DOWN_LEFT]) / 2.0 / 0.75
+                       + ifacialmocap_pose[EYE_LOOK_UP_RIGHT]
+                       - ifacialmocap_pose[EYE_LOOK_DOWN_RIGHT]
+                       + ifacialmocap_pose[EYE_LOOK_DOWN_LEFT]) / 2.0 / 0.75
 
         # print(np_pose[2],(ifacialmocap_pose[JAW_OPEN] - 0.10) )
 
@@ -270,9 +277,10 @@ def main():
                 cv2.cvtColor(postprocessing_image(output_image.cpu()), cv2.COLOR_RGBA2RGB), (512, 512))
             cam.send(result_image)
             cam.sleep_until_next_frame()
-        toc=time.perf_counter()
-        fps =1/(toc-tic)
-        print(fps)
+        # toc=time.perf_counter()
+        # fps =1/(toc-tic)
+        # print(fps)
+
 
 if __name__ == '__main__':
     main()
