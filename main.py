@@ -7,6 +7,7 @@ import numpy as np
 import mediapipe as mp
 from PIL import Image
 
+import tha2.poser.modes.mode_20_wx
 from models import TalkingAnimeLight
 from pose import get_pose
 from utils import preprocessing_image, postprocessing_image
@@ -20,7 +21,6 @@ import time
 from multiprocessing import Value, Process, Queue
 
 from tha2.mocap.ifacialmocap_constants import *
-from tha2.mocap.ifacialmocap_pose_converter import IFacialMocapPoseConverter
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', action='store_true')
@@ -113,24 +113,24 @@ class ClientProcess(Process):
         data = {}
 
         for item in blender_data.split('|'):
-            if (item.find('#') != -1):
+            if item.find('#') != -1:
                 k, arr = item.split('#')
                 arr = [float(n) for n in arr.split(',')]
                 data[k.replace("_L", "Left").replace("_R", "Right")] = arr
-            elif (item.find('-') != -1):
+            elif item.find('-') != -1:
                 k, v = item.split("-")
                 data[k.replace("_L", "Left").replace("_R", "Right")] = float(v) / 100
 
-        toRad = 57.3
-        data[HEAD_BONE_X] = data["=head"][0] / toRad
-        data[HEAD_BONE_Y] = data["=head"][1] / toRad
-        data[HEAD_BONE_Z] = data["=head"][2] / toRad
-        data[RIGHT_EYE_BONE_X] = data["rightEye"][0] / toRad
-        data[RIGHT_EYE_BONE_Y] = data["rightEye"][1] / toRad
-        data[RIGHT_EYE_BONE_Z] = data["rightEye"][2] / toRad
-        data[LEFT_EYE_BONE_X] = data["leftEye"][0] / toRad
-        data[LEFT_EYE_BONE_Y] = data["leftEye"][1] / toRad
-        data[LEFT_EYE_BONE_Z] = data["leftEye"][2] / toRad
+        to_rad = 57.3
+        data[HEAD_BONE_X] = data["=head"][0] / to_rad
+        data[HEAD_BONE_Y] = data["=head"][1] / to_rad
+        data[HEAD_BONE_Z] = data["=head"][2] / to_rad
+        data[RIGHT_EYE_BONE_X] = data["rightEye"][0] / to_rad
+        data[RIGHT_EYE_BONE_Y] = data["rightEye"][1] / to_rad
+        data[RIGHT_EYE_BONE_Z] = data["rightEye"][2] / to_rad
+        data[LEFT_EYE_BONE_X] = data["leftEye"][0] / to_rad
+        data[LEFT_EYE_BONE_Y] = data["leftEye"][1] / to_rad
+        data[LEFT_EYE_BONE_Z] = data["leftEye"][2] / to_rad
 
         return data
 
@@ -144,9 +144,12 @@ def main():
     img = img.resize((256, 256))
     input_image = preprocessing_image(img).unsqueeze(0)
 
+    ifm_converter=None
+
     if (args.ifm is not None):
         client_process = ClientProcess()
         client_process.start()
+        ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
 
     else:
 
@@ -199,24 +202,31 @@ def main():
             except queue.Empty:
                 pass
 
-            ifacialmocap_pose = blender_data
+            ifacialmocap_pose_converted=ifm_converter.convert(blender_data)
 
-            eye_l_h_temp = ifacialmocap_pose[EYE_BLINK_LEFT]
-            eye_r_h_temp = ifacialmocap_pose[EYE_BLINK_RIGHT]
-            mouth_ratio = (ifacialmocap_pose[JAW_OPEN] - 0.10)
-            x_angle = -ifacialmocap_pose[HEAD_BONE_X] * 1.5 + 1.57
-            y_angle = -ifacialmocap_pose[HEAD_BONE_Y]
-            z_angle = ifacialmocap_pose[HEAD_BONE_Z] - 1.57
+            # ifacialmocap_pose = blender_data
+            #
+            # eye_l_h_temp = ifacialmocap_pose[EYE_BLINK_LEFT]
+            # eye_r_h_temp = ifacialmocap_pose[EYE_BLINK_RIGHT]
+            # mouth_ratio = (ifacialmocap_pose[JAW_OPEN] - 0.10)*1.3
+            # x_angle = -ifacialmocap_pose[HEAD_BONE_X] * 1.5 + 1.57
+            # y_angle = -ifacialmocap_pose[HEAD_BONE_Y]
+            # z_angle = ifacialmocap_pose[HEAD_BONE_Z] - 1.57
+            #
+            # eye_x_ratio = (ifacialmocap_pose[EYE_LOOK_IN_LEFT] -
+            #                ifacialmocap_pose[EYE_LOOK_OUT_LEFT] -
+            #                ifacialmocap_pose[EYE_LOOK_IN_RIGHT] +
+            #                ifacialmocap_pose[EYE_LOOK_OUT_RIGHT]) / 2.0 / 0.75
+            #
+            # eye_y_ratio = (ifacialmocap_pose[EYE_LOOK_UP_LEFT]
+            #                + ifacialmocap_pose[EYE_LOOK_UP_RIGHT]
+            #                - ifacialmocap_pose[EYE_LOOK_DOWN_RIGHT]
+            #                + ifacialmocap_pose[EYE_LOOK_DOWN_LEFT]) / 2.0 / 0.75
 
-            eye_x_ratio = (ifacialmocap_pose[EYE_LOOK_IN_LEFT] -
-                           ifacialmocap_pose[EYE_LOOK_OUT_LEFT] -
-                           ifacialmocap_pose[EYE_LOOK_IN_RIGHT] +
-                           ifacialmocap_pose[EYE_LOOK_OUT_RIGHT]) / 2.0 / 0.75
-
-            eye_y_ratio = (ifacialmocap_pose[EYE_LOOK_UP_LEFT]
-                           + ifacialmocap_pose[EYE_LOOK_UP_RIGHT]
-                           - ifacialmocap_pose[EYE_LOOK_DOWN_RIGHT]
-                           + ifacialmocap_pose[EYE_LOOK_DOWN_LEFT]) / 2.0 / 0.75
+            for i in range(12,39):
+                mouth_eye_vector[0,i-12]=ifacialmocap_pose_converted[i]
+            for i in range(39,42):
+                pose_vector[0,i-39]=ifacialmocap_pose_converted[i]
 
         else:
             ret, frame = cap.read()
@@ -252,20 +262,20 @@ def main():
             y_angle = np_pose[6]
             z_angle = np_pose[7]
 
-        mouth_eye_vector[0, :] = 0
-        pose_vector[0, :] = 0
+            mouth_eye_vector[0, :] = 0
+            pose_vector[0, :] = 0
 
-        mouth_eye_vector[0, 2] = eye_l_h_temp
-        mouth_eye_vector[0, 3] = eye_r_h_temp
+            mouth_eye_vector[0, 2] = eye_l_h_temp
+            mouth_eye_vector[0, 3] = eye_r_h_temp
 
-        mouth_eye_vector[0, 14] = mouth_ratio * 2
+            mouth_eye_vector[0, 14] = mouth_ratio * 1.5
 
-        mouth_eye_vector[0, 25] = eye_y_ratio
-        mouth_eye_vector[0, 26] = eye_x_ratio
+            mouth_eye_vector[0, 25] = eye_y_ratio
+            mouth_eye_vector[0, 26] = eye_x_ratio
 
-        pose_vector[0, 0] = (x_angle - 1.5) * 1.6
-        pose_vector[0, 1] = y_angle * 2.0  # temp weight
-        pose_vector[0, 2] = (z_angle + 1.5) * 2  # temp weight
+            pose_vector[0, 0] = (x_angle - 1.5) * 1.6
+            pose_vector[0, 1] = y_angle * 2.0  # temp weight
+            pose_vector[0, 2] = (z_angle + 1.5) * 2  # temp weight
 
         output_image = model(input_image, mouth_eye_vector, pose_vector)
 
