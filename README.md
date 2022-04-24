@@ -73,3 +73,8 @@ https://www.ifacialmocap.com/download/
 购买之前确认好自己的设备支持  
 **不需要下载PC软件**，装好iOS端的软件即可，连接信息通过参数传入Python  
 
+## Run
+
+`python main.py --output_webcam --ifm 192.168.31.182:49983 --character y`
+
+先自己玩一下，等我把原repo的opencv再搬回来再说参数的事
