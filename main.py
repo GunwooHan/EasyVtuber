@@ -141,6 +141,7 @@ class ClientProcess(Process):
 
         return data
 
+
 class ClientProcess1(Process):
     def __init__(self):
         super().__init__()
@@ -196,23 +197,23 @@ class ClientProcess1(Process):
         data = {}
 
         for item in blender_data.split('|'):
-            if(item.find('#')!=-1):
-                k,arr=item.split('#')
-                arr=[float(n) for n in arr.split(',')]
-                data[k.replace("_L","Left").replace("_R","Right")]=arr
-            elif(item.find('-')!=-1):
-                k,v=item.split("-")
-                data[k.replace("_L","Left").replace("_R","Right")]=float(v)/100
+            if (item.find('#') != -1):
+                k, arr = item.split('#')
+                arr = [float(n) for n in arr.split(',')]
+                data[k.replace("_L", "Left").replace("_R", "Right")] = arr
+            elif (item.find('-') != -1):
+                k, v = item.split("-")
+                data[k.replace("_L", "Left").replace("_R", "Right")] = float(v) / 100
 
         # shape_key_values = blender_data["shapeKeyValues"]
         # for blendshape_name in BLENDSHAPE_NAMES:
         #     data[blendshape_name] = shape_key_values[blendshape_name]
         #
         # head_bone = blender_data["boneValues"]["armatures"]["bones"]["headBone"]
-        toRad=57.3
-        data[HEAD_BONE_X] = data["=head"][0]/toRad
-        data[HEAD_BONE_Y] = data["=head"][1]/toRad
-        data[HEAD_BONE_Z] = data["=head"][2]/toRad
+        toRad = 57.3
+        data[HEAD_BONE_X] = data["=head"][0] / toRad
+        data[HEAD_BONE_Y] = data["=head"][1] / toRad
+        data[HEAD_BONE_Z] = data["=head"][2] / toRad
         # data[HEAD_BONE_QUAT] = [
         #     head_bone["q_rx"],
         #     head_bone["q_ry"],
@@ -221,9 +222,9 @@ class ClientProcess1(Process):
         # ]
         #
         # right_eye_bone = blender_data["boneValues"]["armatures"]["bones"]["rightEyeBone"]
-        data[RIGHT_EYE_BONE_X] = data["rightEye"][0]/toRad
-        data[RIGHT_EYE_BONE_Y] = data["rightEye"][1]/toRad
-        data[RIGHT_EYE_BONE_Z] = data["rightEye"][2]/toRad
+        data[RIGHT_EYE_BONE_X] = data["rightEye"][0] / toRad
+        data[RIGHT_EYE_BONE_Y] = data["rightEye"][1] / toRad
+        data[RIGHT_EYE_BONE_Z] = data["rightEye"][2] / toRad
         # data[RIGHT_EYE_BONE_QUAT] = [
         #     right_eye_bone["q_rx"],
         #     right_eye_bone["q_ry"],
@@ -232,9 +233,9 @@ class ClientProcess1(Process):
         # ]
         #
         # left_eye_bone = blender_data["boneValues"]["armatures"]["bones"]["leftEyeBone"]
-        data[LEFT_EYE_BONE_X] = data["leftEye"][0]/toRad
-        data[LEFT_EYE_BONE_Y] = data["leftEye"][1]/toRad
-        data[LEFT_EYE_BONE_Z] = data["leftEye"][2]/toRad
+        data[LEFT_EYE_BONE_X] = data["leftEye"][0] / toRad
+        data[LEFT_EYE_BONE_Y] = data["leftEye"][1] / toRad
+        data[LEFT_EYE_BONE_Z] = data["leftEye"][2] / toRad
         # data[LEFT_EYE_BONE_QUAT] = [
         #     left_eye_bone["q_rx"],
         #     left_eye_bone["q_ry"],
@@ -273,7 +274,8 @@ def main():
     # facemesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
 
     if args.output_webcam:
-        cam = pyvirtualcam.Camera(width=256, height=256, fps=30,backend ='unitycapture',fmt=pyvirtualcam.PixelFormat.RGBA)
+        cam = pyvirtualcam.Camera(width=256, height=256, fps=30, backend='unitycapture',
+                                  fmt=pyvirtualcam.PixelFormat.RGBA)
         print(f'Using virtual camera: {cam.device}')
 
     mouth_eye_vector = torch.empty(1, 27)
@@ -355,6 +357,14 @@ def main():
         # print(np_pose[2],(ifacialmocap_pose[JAW_OPEN] - 0.10) )
 
         mouth_eye_vector[0, :] = 0
+        pose_vector[0, 0] = 0
+        pose_vector[0, 1] = 0
+        pose_vector[0, 2] = 0
+
+        # debugValue=time.perf_counter()%1
+        #
+        # mouth_eye_vector[0, 22] = debugValue
+        # mouth_eye_vector[0, 23] = debugValue
 
         mouth_eye_vector[0, 2] = eye_l_h_temp
         mouth_eye_vector[0, 3] = eye_r_h_temp
@@ -387,8 +397,8 @@ def main():
             result_image = postprocessing_image(output_image.cpu())
             cam.send(result_image)
             cam.sleep_until_next_frame()
-        toc=time.perf_counter()
-        fps =1/(toc-tic)
+        toc = time.perf_counter()
+        fps = 1 / (toc - tic)
         # print("R:",fps)
 
 
