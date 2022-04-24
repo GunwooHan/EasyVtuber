@@ -75,6 +75,12 @@ https://www.ifacialmocap.com/download/
 
 ## Run
 
-`python main.py --output_webcam --ifm 192.168.31.182:49983 --character y`
+完全体运行命令`python main.py --output_webcam unitycapture --ifm 192.168.31.182:49983 --character y`
 
-先自己玩一下，等我把原repo的opencv再搬回来再说参数的事
+参数名 | 值类型 | 说明
+:---: | :---: | :---:
+--character|字符串|`character`目录下的输入图像文件名，不需要带扩展名
+--debug|无|打开OpenCV预览窗口输出渲染结果，如果没有任何输出配置，该参数默认生效
+--input|字符串|不使用iOS面捕时，传入要使用的摄像头设备名称，默认为设备0，有ifm参数时无效
+--ifm|字符串|使用iOS面捕时，传入设备的`IP:端口号`，如`192.168.31.182:49983`
+--output_webcam|字符串|可用值为`obs` `unitycapture`，选择对应的输出种类，不传不输出到摄像头

@@ -25,11 +25,12 @@ from tha2.mocap.ifacialmocap_constants import *
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', action='store_true')
 parser.add_argument('--input', type=str, default='cam')
-parser.add_argument('--character', type=str, default='test3')
-parser.add_argument('--output_dir', type=str, default=f'dst')
+parser.add_argument('--character', type=str, default='y')
+parser.add_argument('--output_dir', type=str)
 parser.add_argument('--output_webcam', type=str)
 parser.add_argument('--ifm', type=str)
 args = parser.parse_args()
+if args.output_webcam is None and args.output_dir is None: args.debug=True
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
