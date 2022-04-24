@@ -1,4 +1,4 @@
-pretrained
+pretrained/**
 character
 src
 dst
