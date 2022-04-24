@@ -1,4 +1,6 @@
-# EasyVtuber
+# EasyVtuber  
+
+> 用买皮的钱，再买一张3080吧！
 
 ![OBS Record With Transparent Virtural Cam Input](assets/new_sample.gif)
 
@@ -35,10 +37,11 @@ Fork自 https://github.com/GunwooHan/EasyVtuber
 启动Anaconda Prompt控制台  
 国内用户建议此时切换到清华源（pip和conda都要换掉，尤其是conda的Pytorch Channel，pytorch本体太大了）  
 然后运行 `conda env create -f env_conda.yaml` 一键安装所有依赖  
-如果有报错（一般是网络问题），就删掉配了一半的环境，`conda clean --all`清掉下载缓存，调整配置后再试
+如果有报错（一般是网络问题），删掉配了一半的环境，`conda clean --all`清掉下载缓存，调整配置后再试
 
-安装完成后，在Pycharm内打开本项目，右下角解释器菜单点开，`Add Interpreter...`  
-选好自己电脑上的`conda.exe`和刚才创建好的`talking-head-anime-2-demo`环境内的`python.exe`
+安装完成后，在Pycharm内打开本项目，右下角解释器菜单点开，`Add Interpreter...`->`Conda Environment`->`Existing environment`  
+选好自己电脑上的`conda.exe`和刚才创建好的`talking-head-anime-2-demo`环境内的`python.exe`    
+点击OK，依赖全亮即可  
 
 ### 下载预训练模型  
 
@@ -55,3 +58,18 @@ https://github.com/pkhungurn/talking-head-anime-2-demo#download-the-model
   - two_algo_face_rotator.pt
   - PUT_MODEL_HERE
 ```
+
+### 输入输出设备  
+
+#### UnityCapture  
+
+如果需要使用透明通道输出，参考 https://github.com/schellingb/UnityCapture#installation 安装好UnityCapture  
+只需要正常走完Install.bat，在OBS里能看到对应的设备（Unity Video Capture）就行
+
+#### iFacialMocap  
+
+https://www.ifacialmocap.com/download/  
+你大概率需要购买正式版（非广告，只是试用版不太够时长）  
+购买之前确认好自己的设备支持  
+**不需要下载PC软件**，装好iOS端的软件即可，连接信息通过参数传入Python  
+
