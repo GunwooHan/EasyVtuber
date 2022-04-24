@@ -1,4 +1,5 @@
 pretrained/**
+!pretrained/PUT_MODEL_HERE
 character
 src
 dst
