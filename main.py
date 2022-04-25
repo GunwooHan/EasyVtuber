@@ -126,6 +126,8 @@ class ClientProcess(Process):
         data[HEAD_BONE_X] = data["=head"][0] / to_rad
         data[HEAD_BONE_Y] = data["=head"][1] / to_rad
         data[HEAD_BONE_Z] = data["=head"][2] / to_rad
+        data[HEAD_BONE_QUAT]=[data["=head"][3],data["=head"][4],data["=head"][5],1]
+        print(data[HEAD_BONE_QUAT])
         data[RIGHT_EYE_BONE_X] = data["rightEye"][0] / to_rad
         data[RIGHT_EYE_BONE_Y] = data["rightEye"][1] / to_rad
         data[RIGHT_EYE_BONE_Z] = data["rightEye"][2] / to_rad
@@ -183,6 +185,7 @@ def main():
     input_image = input_image.to(device)
     mouth_eye_vector = mouth_eye_vector.to(device)
     pose_vector = pose_vector.to(device)
+    position_vector=[0,0,0,1]
 
     pose_queue = []
     blender_data = create_default_blender_data()
@@ -224,6 +227,7 @@ def main():
             #                - ifacialmocap_pose[EYE_LOOK_DOWN_RIGHT]
             #                + ifacialmocap_pose[EYE_LOOK_DOWN_LEFT]) / 2.0 / 0.75
 
+            position_vector=blender_data[HEAD_BONE_QUAT]
             for i in range(12,39):
                 mouth_eye_vector[0,i-12]=ifacialmocap_pose_converted[i]
             for i in range(39,42):
@@ -279,9 +283,16 @@ def main():
             pose_vector[0, 2] = (z_angle + 1.5) * 2  # temp weight
 
         output_image = model(input_image, mouth_eye_vector, pose_vector)
+        postprocessed_image=postprocessing_image(output_image.cpu())
+        k_scale=max(position_vector[2]+1,1)
+        rotate_angle=-position_vector[0]*20
+        dx=-position_vector[0]*800
+        dy=position_vector[1]*3000
+
+        postprocessed_image=cv2.warpAffine(postprocessed_image,cv2.getRotationMatrix2D((128+dx,128+dy),rotate_angle,k_scale),(256,256))
 
         if args.debug:
-            output_frame = cv2.cvtColor(postprocessing_image(output_image.cpu()), cv2.COLOR_RGBA2BGR)
+            output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGR)
             # resized_frame = cv2.resize(output_frame, (np.min(debug_image.shape[:2]), np.min(debug_image.shape[:2])))
             # output_frame = np.concatenate([debug_image, resized_frame], axis=1)
             cv2.imshow("frame", output_frame)
@@ -294,7 +305,7 @@ def main():
             # result_image = np.zeros([720, 1280, 3], dtype=np.uint8)
             # result_image[720 - 512:, 1280 // 2 - 256:1280 // 2 + 256] = cv2.resize(
             #     cv2.cvtColor(postprocessing_image(output_image.cpu()), cv2.COLOR_RGBA2RGB), (512, 512))
-            result_image = postprocessing_image(output_image.cpu())
+            result_image = postprocessed_image
             if args.output_webcam == 'obs':
                 result_image = cv2.cvtColor(result_image, cv2.COLOR_RGBA2RGB)
             cam.send(result_image)
