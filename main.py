@@ -18,19 +18,24 @@ import os
 import queue
 import socket
 import time
+import math
 from multiprocessing import Value, Process, Queue
 
 from tha2.mocap.ifacialmocap_constants import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', action='store_true')
+parser.add_argument('--extend_movement', type=float)
 parser.add_argument('--input', type=str, default='cam')
 parser.add_argument('--character', type=str, default='y')
 parser.add_argument('--output_dir', type=str)
 parser.add_argument('--output_webcam', type=str)
+parser.add_argument('--output_size', type=str,default='256x256')
 parser.add_argument('--ifm', type=str)
 args = parser.parse_args()
-if args.output_webcam is None and args.output_dir is None: args.debug=True
+args.output_w=int(args.output_size.split('x')[0])
+args.output_h=int(args.output_size.split('x')[1])
+if args.output_webcam is None and args.output_dir is None: args.debug = True
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -126,8 +131,8 @@ class ClientProcess(Process):
         data[HEAD_BONE_X] = data["=head"][0] / to_rad
         data[HEAD_BONE_Y] = data["=head"][1] / to_rad
         data[HEAD_BONE_Z] = data["=head"][2] / to_rad
-        data[HEAD_BONE_QUAT]=[data["=head"][3],data["=head"][4],data["=head"][5],1]
-        print(data[HEAD_BONE_QUAT])
+        data[HEAD_BONE_QUAT] = [data["=head"][3], data["=head"][4], data["=head"][5], 1]
+        print(data[HEAD_BONE_QUAT][2],min(data[EYE_BLINK_LEFT],data[EYE_BLINK_RIGHT]))
         data[RIGHT_EYE_BONE_X] = data["rightEye"][0] / to_rad
         data[RIGHT_EYE_BONE_Y] = data["rightEye"][1] / to_rad
         data[RIGHT_EYE_BONE_Z] = data["rightEye"][2] / to_rad
@@ -144,10 +149,14 @@ def main():
     model = model.eval()
     model = model
     img = Image.open(f"character/{args.character}.png")
-    img = img.resize((256, 256))
-    input_image = preprocessing_image(img).unsqueeze(0)
+    wRatio = img.size[0] / 256
+    img = img.resize((256, img.size[1] / wRatio))
+    input_image = preprocessing_image(img.crop((0, 0, 256, 256))).unsqueeze(0)
+    extra_image = None
+    if img.size[1]>256:
+        extra_image = np.array(img.crop((0,256,img.size[0],img.size[1])))
 
-    ifm_converter=None
+    ifm_converter = None
 
     if (args.ifm is not None):
         client_process = ClientProcess()
@@ -169,7 +178,7 @@ def main():
     facemesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
 
     if args.output_webcam:
-        cam = pyvirtualcam.Camera(width=256, height=256, fps=30, backend=args.output_webcam,
+        cam = pyvirtualcam.Camera(width=args.output_w, height=args.output_h, fps=30, backend=args.output_webcam,
                                   fmt=
                                   {'unitycapture': pyvirtualcam.PixelFormat.RGBA, 'obs': pyvirtualcam.PixelFormat.RGB}[
                                       args.output_webcam])
@@ -185,7 +194,7 @@ def main():
     input_image = input_image.to(device)
     mouth_eye_vector = mouth_eye_vector.to(device)
     pose_vector = pose_vector.to(device)
-    position_vector=[0,0,0,1]
+    position_vector = [0, 0, 0, 1]
 
     pose_queue = []
     blender_data = create_default_blender_data()
@@ -206,7 +215,7 @@ def main():
             except queue.Empty:
                 pass
 
-            ifacialmocap_pose_converted=ifm_converter.convert(blender_data)
+            ifacialmocap_pose_converted = ifm_converter.convert(blender_data)
 
             # ifacialmocap_pose = blender_data
             #
@@ -227,11 +236,11 @@ def main():
             #                - ifacialmocap_pose[EYE_LOOK_DOWN_RIGHT]
             #                + ifacialmocap_pose[EYE_LOOK_DOWN_LEFT]) / 2.0 / 0.75
 
-            position_vector=blender_data[HEAD_BONE_QUAT]
-            for i in range(12,39):
-                mouth_eye_vector[0,i-12]=ifacialmocap_pose_converted[i]
-            for i in range(39,42):
-                pose_vector[0,i-39]=ifacialmocap_pose_converted[i]
+            position_vector = blender_data[HEAD_BONE_QUAT]
+            for i in range(12, 39):
+                mouth_eye_vector[0, i - 12] = ifacialmocap_pose_converted[i]
+            for i in range(39, 42):
+                pose_vector[0, i - 39] = ifacialmocap_pose_converted[i]
 
         else:
             ret, frame = cap.read()
@@ -283,16 +292,25 @@ def main():
             pose_vector[0, 2] = (z_angle + 1.5) * 2  # temp weight
 
         output_image = model(input_image, mouth_eye_vector, pose_vector)
-        postprocessed_image=postprocessing_image(output_image.cpu())
-        k_scale=max(position_vector[2]+1,1)
-        rotate_angle=-position_vector[0]*20
-        dx=-position_vector[0]*800
-        dy=position_vector[1]*3000
+        postprocessed_image = postprocessing_image(output_image.cpu())
+        if extra_image is not None:
+            postprocessed_image = cv2.vconcat([postprocessed_image,extra_image])
+        if args.extend_movement is not None:
+            k_scale = position_vector[2]*math.sqrt(args.extend_movement) + 1
+            rotate_angle = -position_vector[0] * 40*args.extend_movement
+            dx = position_vector[0] * 400 * k_scale*args.extend_movement
+            dy = -position_vector[1] * 600 * k_scale*args.extend_movement
+            rm = cv2.getRotationMatrix2D((128, 128), rotate_angle, k_scale)
+            rm[0, 2] += dx+args.output_w/2-128
+            rm[1, 2] += dy+args.output_h/2-128
 
-        postprocessed_image=cv2.warpAffine(postprocessed_image,cv2.getRotationMatrix2D((128+dx,128+dy),rotate_angle,k_scale),(256,256))
+            postprocessed_image = cv2.warpAffine(
+                postprocessed_image,
+                rm,
+                (args.output_w, args.output_h))
 
         if args.debug:
-            output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGR)
+            output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGRA)
             # resized_frame = cv2.resize(output_frame, (np.min(debug_image.shape[:2]), np.min(debug_image.shape[:2])))
             # output_frame = np.concatenate([debug_image, resized_frame], axis=1)
             cv2.imshow("frame", output_frame)
