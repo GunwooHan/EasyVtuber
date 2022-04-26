@@ -132,7 +132,7 @@ class ClientProcess(Process):
         data[HEAD_BONE_Y] = data["=head"][1] / to_rad
         data[HEAD_BONE_Z] = data["=head"][2] / to_rad
         data[HEAD_BONE_QUAT] = [data["=head"][3], data["=head"][4], data["=head"][5], 1]
-        print(data[HEAD_BONE_QUAT][2],min(data[EYE_BLINK_LEFT],data[EYE_BLINK_RIGHT]))
+        # print(data[HEAD_BONE_QUAT][2],min(data[EYE_BLINK_LEFT],data[EYE_BLINK_RIGHT]))
         data[RIGHT_EYE_BONE_X] = data["rightEye"][0] / to_rad
         data[RIGHT_EYE_BONE_Y] = data["rightEye"][1] / to_rad
         data[RIGHT_EYE_BONE_Z] = data["rightEye"][2] / to_rad
