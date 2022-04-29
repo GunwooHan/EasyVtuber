@@ -21,6 +21,9 @@ import time
 import math
 from multiprocessing import Value, Process, Queue
 
+import pyanime4k
+from pyanime4k import ac
+
 from tha2.mocap.ifacialmocap_constants import *
 
 parser = argparse.ArgumentParser()
@@ -32,6 +35,7 @@ parser.add_argument('--output_dir', type=str)
 parser.add_argument('--output_webcam', type=str)
 parser.add_argument('--output_size', type=str,default='256x256')
 parser.add_argument('--ifm', type=str)
+parser.add_argument('--anime4k', action='store_true')
 args = parser.parse_args()
 args.output_w=int(args.output_size.split('x')[0])
 args.output_h=int(args.output_size.split('x')[1])
@@ -178,11 +182,28 @@ def main():
     facemesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
 
     if args.output_webcam:
-        cam = pyvirtualcam.Camera(width=args.output_w, height=args.output_h, fps=30, backend=args.output_webcam,
+        cam_scale=1
+        if args.anime4k:
+            cam_scale=2
+        cam = pyvirtualcam.Camera(width=args.output_w*cam_scale, height=args.output_h*cam_scale, fps=30, backend=args.output_webcam,
                                   fmt=
                                   {'unitycapture': pyvirtualcam.PixelFormat.RGBA, 'obs': pyvirtualcam.PixelFormat.RGB}[
                                       args.output_webcam])
         print(f'Using virtual camera: {cam.device}')
+
+    a=None
+
+    if args.anime4k:
+        parameters = ac.Parameters()
+        # enable HDN for ACNet
+        parameters.HDN = True
+
+        a = ac.AC(
+            managerList=ac.ManagerList([ac.OpenCLACNetManager(pID=0, dID=0)]),
+            type=ac.ProcessorType.OpenCL_ACNet
+        )
+
+
 
     mouth_eye_vector = torch.empty(1, 27)
     pose_vector = torch.empty(1, 3)
@@ -308,6 +329,21 @@ def main():
                 postprocessed_image,
                 rm,
                 (args.output_w, args.output_h))
+
+        if args.anime4k:
+            alpha_channel=postprocessed_image[:,:,3]
+            alpha_channel=cv2.resize(alpha_channel,None,fx=2,fy=2)
+
+            # a.load_image_from_numpy(cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2RGB), input_type=ac.AC_INPUT_RGB)
+            # img = cv2.imread("character/test41.png")
+            img1=cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGR)
+            # a.load_image_from_numpy(img, input_type=ac.AC_INPUT_BGR)
+            a.load_image_from_numpy(img1, input_type=ac.AC_INPUT_BGR)
+            a.process()
+            postprocessed_image=a.save_image_to_numpy()
+            postprocessed_image=cv2.merge((postprocessed_image,alpha_channel))
+            postprocessed_image=cv2.cvtColor(postprocessed_image, cv2.COLOR_BGRA2RGBA)
+
 
         if args.debug:
             output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGRA)
