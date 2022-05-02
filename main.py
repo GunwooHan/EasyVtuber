@@ -198,10 +198,16 @@ def main():
         # enable HDN for ACNet
         parameters.HDN = True
 
+        # a = ac.AC(
+        #     managerList=ac.ManagerList([ac.CUDAManager(dID=0)]),
+        #     type=ac.ProcessorType.Cuda_ACNet,
+        # )
+
         a = ac.AC(
-            managerList=ac.ManagerList([ac.OpenCLACNetManager(pID=0, dID=0)]),
-            type=ac.ProcessorType.OpenCL_ACNet
+            managerList=ac.ManagerList([ac.OpenCLACNetManager(pID=0,dID=0)]),
+            type=ac.ProcessorType.OpenCL_ACNet,
         )
+        a.set_arguments(parameters)
 
 
 

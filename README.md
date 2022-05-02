@@ -64,7 +64,10 @@ https://github.com/pkhungurn/talking-head-anime-2-demo#download-the-model
 #### UnityCapture  
 
 如果需要使用透明通道输出，参考 https://github.com/schellingb/UnityCapture#installation 安装好UnityCapture  
-只需要正常走完Install.bat，在OBS里能看到对应的设备（Unity Video Capture）就行
+只需要正常走完Install.bat，在OBS里能看到对应的设备（Unity Video Capture）就行  
+
+在OBS添加完摄像头以后，还需要手动配置一次摄像头属性才能支持ARGB    
+右键属性-取消激活-分辨率类型自定义-分辨率512x512(或者256x256，取决于你有没有传--extend_movement)-视频格式ARGB-激活
 
 #### iFacialMocap  
 
