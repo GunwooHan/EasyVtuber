@@ -228,12 +228,12 @@ def main():
 
     pose_queue = []
     blender_data = create_default_blender_data()
+    tic=0
 
     while True:
         # ret, frame = cap.read()
         # input_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # results = facemesh.process(input_frame)
-        tic = time.perf_counter()
 
         if args.debug_input:
             mouth_eye_vector[0, :] = 0
@@ -374,6 +374,10 @@ def main():
             output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGRA)
             # resized_frame = cv2.resize(output_frame, (np.min(debug_image.shape[:2]), np.min(debug_image.shape[:2])))
             # output_frame = np.concatenate([debug_image, resized_frame], axis=1)
+            toc = time.perf_counter()
+            fps = 1 / (toc - tic)
+            tic = toc
+            cv2.putText(output_frame, str('%.1f' % fps),(0,16),cv2.FONT_HERSHEY_PLAIN,1,(0,255,0),1)
             cv2.imshow("frame", output_frame)
             # cv2.imshow("camera", debug_image)
             cv2.waitKey(1)
@@ -389,9 +393,7 @@ def main():
                 result_image = cv2.cvtColor(result_image, cv2.COLOR_RGBA2RGB)
             cam.send(result_image)
             cam.sleep_until_next_frame()
-        toc = time.perf_counter()
-        fps = 1 / (toc - tic)
-        # print("R:",fps)
+
 
 
 if __name__ == '__main__':
