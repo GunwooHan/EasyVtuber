@@ -4,7 +4,6 @@ from typing import List, Dict, Optional
 
 import numpy
 import scipy.optimize
-import wx
 
 from tha2.mocap.ifacialmocap_constants import *
 from tha2.mocap.ifacialmocap_pose_converter import IFacialMocapPoseConverter
@@ -278,108 +277,6 @@ class IFacialMocapPoseConverter20(IFacialMocapPoseConverter):
                 # pose[30] = restricted_decomp[3]
 
         return pose
-
-    def init_pose_converter_panel(self, parent):
-        self.panel = wx.Panel(parent, style=wx.SIMPLE_BORDER)
-        self.panel_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.panel.SetSizer(self.panel_sizer)
-        self.panel.SetAutoLayout(1)
-        parent.GetSizer().Add(self.panel, 0, wx.EXPAND)
-
-        if True:
-            eyebrow_down_mode_text = wx.StaticText(self.panel, label=" --- Eyebrow Down Mode --- ",
-                                                   style=wx.ALIGN_CENTER)
-            self.panel_sizer.Add(eyebrow_down_mode_text, 0, wx.EXPAND)
-
-            self.eyebrow_down_mode_choice = wx.Choice(
-                self.panel,
-                choices=[
-                    "ANGRY",
-                    "TROUBLED",
-                    "SERIOUS",
-                    "LOWERED",
-                ])
-            self.eyebrow_down_mode_choice.SetSelection(0)
-            self.panel_sizer.Add(self.eyebrow_down_mode_choice, 0, wx.EXPAND)
-            self.eyebrow_down_mode_choice.Bind(wx.EVT_CHOICE, self.change_eyebrow_down_mode)
-
-            separator = wx.StaticLine(self.panel, -1, size=(256, 5))
-            self.panel_sizer.Add(separator, 0, wx.EXPAND)
-
-        if True:
-            wink_mode_text = wx.StaticText(self.panel, label=" --- Wink Mode --- ", style=wx.ALIGN_CENTER)
-            self.panel_sizer.Add(wink_mode_text, 0, wx.EXPAND)
-
-            self.wink_mode_choice = wx.Choice(
-                self.panel,
-                choices=[
-                    "NORMAL",
-                    "RELAXED",
-                ])
-            self.wink_mode_choice.SetSelection(0)
-            self.panel_sizer.Add(self.wink_mode_choice, 0, wx.EXPAND)
-            self.wink_mode_choice.Bind(wx.EVT_CHOICE, self.change_wink_mode)
-
-            separator = wx.StaticLine(self.panel, -1, size=(256, 5))
-            self.panel_sizer.Add(separator, 0, wx.EXPAND)
-
-        if True:
-            iris_size_text = wx.StaticText(self.panel, label=" --- Iris Size --- ", style=wx.ALIGN_CENTER)
-            self.panel_sizer.Add(iris_size_text, 0, wx.EXPAND)
-
-            self.iris_left_slider = wx.Slider(self.panel, minValue=0, maxValue=1000, value=0, style=wx.HORIZONTAL)
-            self.panel_sizer.Add(self.iris_left_slider, 0, wx.EXPAND)
-            self.iris_left_slider.Bind(wx.EVT_SLIDER, self.change_iris_size)
-
-            self.iris_right_slider = wx.Slider(self.panel, minValue=0, maxValue=1000, value=0, style=wx.HORIZONTAL)
-            self.panel_sizer.Add(self.iris_right_slider, 0, wx.EXPAND)
-            self.iris_right_slider.Bind(wx.EVT_SLIDER, self.change_iris_size)
-            self.iris_right_slider.Enable(False)
-
-            self.link_left_right_irises = wx.CheckBox(
-                self.panel, label="Use same value for both sides")
-            self.link_left_right_irises.SetValue(True)
-            self.panel_sizer.Add(self.link_left_right_irises, wx.SizerFlags().CenterHorizontal().Border())
-            self.link_left_right_irises.Bind(wx.EVT_CHECKBOX, self.link_left_right_irises_clicked)
-
-        self.panel_sizer.Fit(self.panel)
-
-    def change_eyebrow_down_mode(self, event: wx.Event):
-        selected_index = self.eyebrow_down_mode_choice.GetSelection()
-        if selected_index == 0:
-            self.args.eyebrow_down_mode = EyebrowDownMode.ANGRY
-        elif selected_index == 1:
-            self.args.eyebrow_down_mode = EyebrowDownMode.TROUBLED
-        elif selected_index == 2:
-            self.args.eyebrow_down_mode = EyebrowDownMode.SERIOUS
-        else:
-            self.args.eyebrow_down_mode = EyebrowDownMode.LOWERED
-
-    def change_wink_mode(self, event: wx.Event):
-        selected_index = self.wink_mode_choice.GetSelection()
-        if selected_index == 0:
-            self.args.wink_mode = WinkMode.NORMAL
-        else:
-            self.args.wink_mode = WinkMode.RELAXED
-
-    def change_iris_size(self, event: wx.Event):
-        if self.link_left_right_irises.GetValue():
-            left_value = self.iris_left_slider.GetValue()
-            right_value = self.iris_right_slider.GetValue()
-            if left_value != right_value:
-                self.iris_right_slider.SetValue(left_value)
-            self.args.iris_small_left = left_value / 1000.0
-            self.args.iris_small_right = left_value / 1000.0
-        else:
-            self.args.iris_small_left = self.iris_left_slider.GetValue() / 1000.0
-            self.args.iris_small_right = self.iris_right_slider.GetValue() / 1000.0
-
-    def link_left_right_irises_clicked(self, event: wx.Event):
-        if self.link_left_right_irises.GetValue():
-            self.iris_right_slider.Enable(False)
-        else:
-            self.iris_right_slider.Enable(True)
-        self.change_iris_size(event)
 
 
 def create_ifacialmocap_pose_converter(
