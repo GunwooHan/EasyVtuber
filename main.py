@@ -33,12 +33,13 @@ parser.add_argument('--input', type=str, default='cam')
 parser.add_argument('--character', type=str, default='y')
 parser.add_argument('--output_dir', type=str)
 parser.add_argument('--output_webcam', type=str)
-parser.add_argument('--output_size', type=str,default='256x256')
+parser.add_argument('--output_size', type=str, default='256x256')
+parser.add_argument('--debug_input', action='store_true')
 parser.add_argument('--ifm', type=str)
 parser.add_argument('--anime4k', action='store_true')
 args = parser.parse_args()
-args.output_w=int(args.output_size.split('x')[0])
-args.output_h=int(args.output_size.split('x')[1])
+args.output_w = int(args.output_size.split('x')[0])
+args.output_h = int(args.output_size.split('x')[1])
 if args.output_webcam is None and args.output_dir is None: args.debug = True
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -157,41 +158,45 @@ def main():
     img = img.resize((256, int(img.size[1] / wRatio)))
     input_image = preprocessing_image(img.crop((0, 0, 256, 256))).unsqueeze(0)
     extra_image = None
-    if img.size[1]>256:
-        extra_image = np.array(img.crop((0,256,img.size[0],img.size[1])))
+    if img.size[1] > 256:
+        extra_image = np.array(img.crop((0, 256, img.size[0], img.size[1])))
 
     ifm_converter = None
+    cap = None
 
-    if (args.ifm is not None):
-        client_process = ClientProcess()
-        client_process.start()
-        ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
+    if not args.debug_input:
 
-    else:
+        if args.ifm is not None:
+            client_process = ClientProcess()
+            client_process.start()
+            ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
 
-        if args.input == 'cam':
-            cap = cv2.VideoCapture(0)
-            ret, frame = cap.read()
-            if ret is None:
-                raise Exception("Can't find Camera")
         else:
-            cap = cv2.VideoCapture(args.input)
-            frame_count = 0
-            os.makedirs(os.path.join('dst', args.character, args.output_dir), exist_ok=True)
+
+            if args.input == 'cam':
+                cap = cv2.VideoCapture(0)
+                ret, frame = cap.read()
+                if ret is None:
+                    raise Exception("Can't find Camera")
+            else:
+                cap = cv2.VideoCapture(args.input)
+                frame_count = 0
+                os.makedirs(os.path.join('dst', args.character, args.output_dir), exist_ok=True)
 
     facemesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
 
     if args.output_webcam:
-        cam_scale=1
+        cam_scale = 1
         if args.anime4k:
-            cam_scale=2
-        cam = pyvirtualcam.Camera(width=args.output_w*cam_scale, height=args.output_h*cam_scale, fps=30, backend=args.output_webcam,
+            cam_scale = 2
+        cam = pyvirtualcam.Camera(width=args.output_w * cam_scale, height=args.output_h * cam_scale, fps=30,
+                                  backend=args.output_webcam,
                                   fmt=
                                   {'unitycapture': pyvirtualcam.PixelFormat.RGBA, 'obs': pyvirtualcam.PixelFormat.RGB}[
                                       args.output_webcam])
         print(f'Using virtual camera: {cam.device}')
 
-    a=None
+    a = None
 
     if args.anime4k:
         parameters = ac.Parameters()
@@ -204,12 +209,10 @@ def main():
         # )
 
         a = ac.AC(
-            managerList=ac.ManagerList([ac.OpenCLACNetManager(pID=0,dID=0)]),
+            managerList=ac.ManagerList([ac.OpenCLACNetManager(pID=0, dID=0)]),
             type=ac.ProcessorType.OpenCL_ACNet,
         )
         a.set_arguments(parameters)
-
-
 
     mouth_eye_vector = torch.empty(1, 27)
     pose_vector = torch.empty(1, 3)
@@ -232,7 +235,24 @@ def main():
         # results = facemesh.process(input_frame)
         tic = time.perf_counter()
 
-        if args.ifm is not None:
+        if args.debug_input:
+            mouth_eye_vector[0, :] = 0
+            pose_vector[0, :] = 0
+
+            mouth_eye_vector[0, 2] = math.sin(time.perf_counter()*3)
+            mouth_eye_vector[0, 3] = math.sin(time.perf_counter()*3)
+
+            mouth_eye_vector[0, 14] = 0
+
+            mouth_eye_vector[0, 25] = math.sin(time.perf_counter()*2.2)*0.2
+            mouth_eye_vector[0, 26] = math.sin(time.perf_counter()*3.5)*0.8
+
+            pose_vector[0, 0] = math.sin(time.perf_counter()*1.1)
+            pose_vector[0, 1] = math.sin(time.perf_counter()*1.2)
+            pose_vector[0, 2] = math.sin(time.perf_counter()*1.5)
+
+
+        elif args.ifm is not None:
             # get pose from ifm
             try:
                 new_blender_data = blender_data
@@ -321,15 +341,15 @@ def main():
         output_image = model(input_image, mouth_eye_vector, pose_vector)
         postprocessed_image = postprocessing_image(output_image.cpu())
         if extra_image is not None:
-            postprocessed_image = cv2.vconcat([postprocessed_image,extra_image])
+            postprocessed_image = cv2.vconcat([postprocessed_image, extra_image])
         if args.extend_movement is not None:
-            k_scale = position_vector[2]*math.sqrt(args.extend_movement) + 1
-            rotate_angle = -position_vector[0] * 40*args.extend_movement
-            dx = position_vector[0] * 400 * k_scale*args.extend_movement
-            dy = -position_vector[1] * 600 * k_scale*args.extend_movement
+            k_scale = position_vector[2] * math.sqrt(args.extend_movement) + 1
+            rotate_angle = -position_vector[0] * 40 * args.extend_movement
+            dx = position_vector[0] * 400 * k_scale * args.extend_movement
+            dy = -position_vector[1] * 600 * k_scale * args.extend_movement
             rm = cv2.getRotationMatrix2D((128, 128), rotate_angle, k_scale)
-            rm[0, 2] += dx+args.output_w/2-128
-            rm[1, 2] += dy+args.output_h/2-128
+            rm[0, 2] += dx + args.output_w / 2 - 128
+            rm[1, 2] += dy + args.output_h / 2 - 128
 
             postprocessed_image = cv2.warpAffine(
                 postprocessed_image,
@@ -337,19 +357,18 @@ def main():
                 (args.output_w, args.output_h))
 
         if args.anime4k:
-            alpha_channel=postprocessed_image[:,:,3]
-            alpha_channel=cv2.resize(alpha_channel,None,fx=2,fy=2)
+            alpha_channel = postprocessed_image[:, :, 3]
+            alpha_channel = cv2.resize(alpha_channel, None, fx=2, fy=2)
 
             # a.load_image_from_numpy(cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2RGB), input_type=ac.AC_INPUT_RGB)
             # img = cv2.imread("character/test41.png")
-            img1=cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGR)
+            img1 = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGR)
             # a.load_image_from_numpy(img, input_type=ac.AC_INPUT_BGR)
             a.load_image_from_numpy(img1, input_type=ac.AC_INPUT_BGR)
             a.process()
-            postprocessed_image=a.save_image_to_numpy()
-            postprocessed_image=cv2.merge((postprocessed_image,alpha_channel))
-            postprocessed_image=cv2.cvtColor(postprocessed_image, cv2.COLOR_BGRA2RGBA)
-
+            postprocessed_image = a.save_image_to_numpy()
+            postprocessed_image = cv2.merge((postprocessed_image, alpha_channel))
+            postprocessed_image = cv2.cvtColor(postprocessed_image, cv2.COLOR_BGRA2RGBA)
 
         if args.debug:
             output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGRA)
