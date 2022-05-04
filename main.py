@@ -351,19 +351,24 @@ def main():
         postprocessed_image = postprocessing_image(output_image.cpu())
         if extra_image is not None:
             postprocessed_image = cv2.vconcat([postprocessed_image, extra_image])
+
+        k_scale=1
+        rotate_angle=0
+        dx=0
+        dy=0
         if args.extend_movement is not None:
             k_scale = position_vector[2] * math.sqrt(args.extend_movement) + 1
             rotate_angle = -position_vector[0] * 40 * args.extend_movement
             dx = position_vector[0] * 400 * k_scale * args.extend_movement
             dy = -position_vector[1] * 600 * k_scale * args.extend_movement
-            rm = cv2.getRotationMatrix2D((128, 128), rotate_angle, k_scale)
-            rm[0, 2] += dx + args.output_w / 2 - 128
-            rm[1, 2] += dy + args.output_h / 2 - 128
+        rm = cv2.getRotationMatrix2D((128, 128), rotate_angle, k_scale)
+        rm[0, 2] += dx + args.output_w / 2 - 128
+        rm[1, 2] += dy + args.output_h / 2 - 128
 
-            postprocessed_image = cv2.warpAffine(
-                postprocessed_image,
-                rm,
-                (args.output_w, args.output_h))
+        postprocessed_image = cv2.warpAffine(
+            postprocessed_image,
+            rm,
+            (args.output_w, args.output_h))
 
         if args.anime4k:
             alpha_channel = postprocessed_image[:, :, 3]

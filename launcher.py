@@ -106,8 +106,8 @@ def launch():
         if args['is_extend_movement']:
             run_args.append('--extend_movement')
             run_args.append('1')
-            run_args.append('--output_size')
-            run_args.append('512x512')
+        run_args.append('--output_size')
+        run_args.append('512x512')
 
         p = subprocess.Popen(run_args)
         launch_btn.config(text='Stop')
