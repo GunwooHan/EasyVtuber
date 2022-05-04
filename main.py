@@ -153,6 +153,7 @@ def main():
     model = TalkingAnimeLight().to(device)
     model = model.eval()
     model = model
+    print("Pretrained Model Loaded")
     img = Image.open(f"character/{args.character}.png")
     wRatio = img.size[0] / 256
     img = img.resize((256, int(img.size[1] / wRatio)))
@@ -160,6 +161,8 @@ def main():
     extra_image = None
     if img.size[1] > 256:
         extra_image = np.array(img.crop((0, 256, img.size[0], img.size[1])))
+
+    print("Character Image Loaded:", args.character)
 
     ifm_converter = None
     cap = None
@@ -170,6 +173,7 @@ def main():
             client_process = ClientProcess()
             client_process.start()
             ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
+            print("IFM Service Running:", args.ifm)
 
         else:
 
@@ -182,6 +186,7 @@ def main():
                 cap = cv2.VideoCapture(args.input)
                 frame_count = 0
                 os.makedirs(os.path.join('dst', args.character, args.output_dir), exist_ok=True)
+                print("Webcam Input Running")
 
     facemesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
 
@@ -213,6 +218,7 @@ def main():
             type=ac.ProcessorType.OpenCL_ACNet,
         )
         a.set_arguments(parameters)
+        print("Anime4K Loaded")
 
     mouth_eye_vector = torch.empty(1, 27)
     pose_vector = torch.empty(1, 3)
@@ -229,6 +235,8 @@ def main():
     pose_queue = []
     blender_data = create_default_blender_data()
     tic=0
+
+    print("Ready. Close this console to exit.")
 
     while True:
         # ret, frame = cap.read()

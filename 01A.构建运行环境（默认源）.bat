@@ -1,3 +1,4 @@
+@echo off
 python --version
 python -m venv venv
 call venv\Scripts\activate.bat
