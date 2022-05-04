@@ -6,20 +6,20 @@ from tkinter import ttk
 import json
 
 try:
-    f=open('launcher.json')
-    args=json.load(f)
+    f = open('launcher.json')
+    args = json.load(f)
     f.close()
 except:
-    args={
+    args = {
         'character': 'y',
         'input': 2,
         'output': 2,
         'ifm': None,
-        'is_extend_movement':False,
-        'is_anime4k':False,
+        'is_extend_movement': False,
+        'is_anime4k': False,
     }
 
-p=None
+p = None
 
 root = tk.Tk()
 root.resizable(False, False)
@@ -64,20 +64,49 @@ def launch():
         'character': character.get(),
         'input': input.get(),
         'output': output.get(),
-        'ifm':ifm.get(),
-        'is_extend_movement':is_extend_movement.get(),
-        'is_anime4k':is_anime4k.get(),
+        'ifm': ifm.get(),
+        'is_extend_movement': is_extend_movement.get(),
+        'is_anime4k': is_anime4k.get(),
     }
-    f=open('launcher.json', mode='w')
-    json.dump(args,f)
+    f = open('launcher.json', mode='w')
+    json.dump(args, f)
     if p is not None:
         p.kill()
-    p = subprocess.Popen(
-        [os.path.join(os.getcwd(),'venv','Scripts','python.exe'),
-         'main.py','--debug','--debug_input'])
+    else:
+        run_args = [os.path.join(os.getcwd(), 'venv', 'Scripts', 'python.exe'), 'main.py']
+        if len(args['character']):
+            run_args.append('--character')
+            run_args.append(args['character'])
+
+        if args['input']==0:
+            if len(args['ifm']):
+                run_args.append('--ifm')
+                run_args.append(args['ifm'])
+        elif args['input']==1:
+            run_args.append('--input')
+            run_args.append('cam')
+        elif args['input']==2:
+            run_args.append('--debug_input')
+
+        if args['output']==0:
+            run_args.append('--output_webcam')
+            run_args.append('unitycapture')
+        elif args['input']==1:
+            run_args.append('--output_webcam')
+            run_args.append('obs')
+        elif args['input']==2:
+            run_args.append('--debug')
+        if args['is_anime4k']:
+            run_args.append('--anime4k')
+        if args['is_extend_movement']==0:
+            run_args.append('--extend_movement')
+            run_args.append('1')
+
+        run_args.append('--output_size')
+        run_args.append('512x512')
+        p = subprocess.Popen(run_args)
 
 
-
-ttk.Button(launcher, text="Save & Launch", command=launch).pack(fill='x', expand=True, pady=10)
+launch_btn = ttk.Button(launcher, text="Save & Launch", command=launch).pack(fill='x', expand=True, pady=10)
 
 root.mainloop()
