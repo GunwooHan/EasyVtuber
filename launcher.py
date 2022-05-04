@@ -1,4 +1,5 @@
 import os
+import signal
 import subprocess
 import sys
 import tkinter as tk
@@ -60,6 +61,7 @@ ttk.Radiobutton(launcher, text='Initial Debug Output', value=2, variable=output)
 
 def launch():
     global p
+    global launch_btn
     args = {
         'character': character.get(),
         'input': input.get(),
@@ -70,43 +72,55 @@ def launch():
     }
     f = open('launcher.json', mode='w')
     json.dump(args, f)
+    f.close()
     if p is not None:
-        p.kill()
+        subprocess.run(['taskkill','/F','/PID',str(p.pid),'/T'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        p=None
+        launch_btn.config(text="Save & Launch")
     else:
         run_args = [os.path.join(os.getcwd(), 'venv', 'Scripts', 'python.exe'), 'main.py']
         if len(args['character']):
             run_args.append('--character')
             run_args.append(args['character'])
 
-        if args['input']==0:
+        if args['input'] == 0:
             if len(args['ifm']):
                 run_args.append('--ifm')
                 run_args.append(args['ifm'])
-        elif args['input']==1:
+        elif args['input'] == 1:
             run_args.append('--input')
             run_args.append('cam')
-        elif args['input']==2:
+        elif args['input'] == 2:
             run_args.append('--debug_input')
 
-        if args['output']==0:
+        if args['output'] == 0:
             run_args.append('--output_webcam')
             run_args.append('unitycapture')
-        elif args['input']==1:
+        elif args['input'] == 1:
             run_args.append('--output_webcam')
             run_args.append('obs')
-        elif args['input']==2:
+        elif args['input'] == 2:
             run_args.append('--debug')
         if args['is_anime4k']:
             run_args.append('--anime4k')
-        if args['is_extend_movement']==0:
+        if args['is_extend_movement']:
             run_args.append('--extend_movement')
             run_args.append('1')
+            run_args.append('--output_size')
+            run_args.append('512x512')
 
-        run_args.append('--output_size')
-        run_args.append('512x512')
         p = subprocess.Popen(run_args)
+        launch_btn.config(text='Stop')
 
 
-launch_btn = ttk.Button(launcher, text="Save & Launch", command=launch).pack(fill='x', expand=True, pady=10)
+launch_btn = ttk.Button(launcher, text="Save & Launch", command=launch)
+launch_btn.pack(fill='x', expand=True, pady=10)
 
+def closeWindow():
+    if p is not None:
+        subprocess.run(['taskkill','/F','/PID',str(p.pid),'/T'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    root.destroy()
+
+
+root.protocol('WM_DELETE_WINDOW', closeWindow)
 root.mainloop()

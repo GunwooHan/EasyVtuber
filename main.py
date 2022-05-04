@@ -171,6 +171,7 @@ def main():
 
         if args.ifm is not None:
             client_process = ClientProcess()
+            client_process.daemon = True
             client_process.start()
             ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
             print("IFM Service Running:", args.ifm)
