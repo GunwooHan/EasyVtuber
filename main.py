@@ -381,9 +381,6 @@ def main():
             cv2.imshow("frame", output_frame)
             # cv2.imshow("camera", debug_image)
             cv2.waitKey(1)
-        if args.input != 'cam':
-            cv2.imwrite(os.path.join('dst', args.character, args.output_dir, f'{frame_count:04d}.jpeg'))
-            frame_count += 1
         if args.output_webcam:
             # result_image = np.zeros([720, 1280, 3], dtype=np.uint8)
             # result_image[720 - 512:, 1280 // 2 - 256:1280 // 2 + 256] = cv2.resize(
