@@ -22,6 +22,12 @@ except:
 
 p = None
 
+characterList=[]
+for item in sorted(os.listdir('character'),key=lambda x: -os.path.getmtime(os.path.join('character', x))):
+    if '.png' == item[-4:]:
+        characterList.append(item[:-4])
+
+
 root = tk.Tk()
 root.resizable(False, False)
 root.title('EasyVtuber Launcher')
@@ -32,7 +38,8 @@ launcher.pack(padx=10, pady=10, fill='x', expand=True)
 character = tk.StringVar(value=args['character'])
 ttk.Label(launcher, text="Character").pack(fill='x', expand=True)
 
-ttk.Entry(launcher, textvariable=character).pack(fill='x', expand=True)
+# ttk.Entry(launcher, textvariable=character).pack(fill='x', expand=True)
+ttk.Combobox(launcher,textvariable=character,value=characterList).pack(fill='x', expand=True)
 
 input = tk.IntVar(value=args['input'])
 ttk.Label(launcher, text="Face Data Source").pack(fill='x', expand=True)
