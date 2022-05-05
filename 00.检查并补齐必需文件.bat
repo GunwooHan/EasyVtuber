@@ -1,24 +1,24 @@
 @echo off
-echo 1. Python版本：
+echo 1. Check Python Install
 python --version
 pip --version
-echo 如果第一行显示的Python版本号低于3.8，或者Pip未找到/运行出错，请使用附带的跳转链接更新Python后重试
+echo If pip not found, or Python version<3.8, use link 00A.
 echo.
-echo 2. 预训练数据：
+echo 2. Pretrained data
 if exist pretrained\combiner.pt (
-echo 已找到pretrained文件夹下的预训练数据
+echo Pretrained data found.
 ) else (
-echo 未找到预训练数据，请使用附带的跳转链接下载预训练数据并解压到pretrained文件夹中并重试
+echo Pretrained data not found, use link 00B and extract it to pretrained/..
 )
 echo.
-echo 3. UnityCapture：
+echo 3. UnityCapture
 reg query HKLM\SOFTWARE\Classes /s /f UnityCaptureFilter32bit.dll>"%tmp%\null"
 if errorlevel 1 (
-echo 未安装UnityCapture，透明通道输出可能不可用
+echo UnityCapture not found, use link 00C if you need RGBA output.
 ) else (
-echo 已安装UnityCapture
+echo UnityCapture found.
 )
 echo.
 echo.
-echo 检查上述状态无误后运行下一个批处理文件
+echo Make sure everything is OK before you run 01A or 01B.
 pause
