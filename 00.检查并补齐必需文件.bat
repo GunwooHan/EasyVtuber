@@ -2,7 +2,7 @@
 echo 1. Check Python Install
 python --version
 pip --version
-echo If pip not found, or Python version<3.8, use link 00A.
+echo If pip is not found, or Python version less than 3.8, use link 00A.
 echo.
 echo 2. Pretrained data
 if exist pretrained\combiner.pt (
