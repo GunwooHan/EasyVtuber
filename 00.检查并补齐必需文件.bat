@@ -11,6 +11,14 @@ echo 已找到pretrained文件夹下的预训练数据
 echo 未找到预训练数据，请使用附带的跳转链接下载预训练数据并解压到pretrained文件夹中并重试
 )
 echo.
+echo 3. UnityCapture：
+reg query HKLM\SOFTWARE\Classes /s /f UnityCaptureFilter32bit.dll>"%tmp%\null"
+if errorlevel 1 (
+echo 未安装UnityCapture，透明通道输出可能不可用
+) else (
+echo 已安装UnityCapture
+)
 echo.
-echo 检查上述两项无误后运行下一个批处理文件
+echo.
+echo 检查上述状态无误后运行下一个批处理文件
 pause
