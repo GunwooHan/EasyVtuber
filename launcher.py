@@ -22,11 +22,10 @@ except:
 
 p = None
 
-characterList=[]
-for item in sorted(os.listdir('character'),key=lambda x: -os.path.getmtime(os.path.join('character', x))):
+characterList = []
+for item in sorted(os.listdir('character'), key=lambda x: -os.path.getmtime(os.path.join('character', x))):
     if '.png' == item[-4:]:
         characterList.append(item[:-4])
-
 
 root = tk.Tk()
 root.resizable(False, False)
@@ -39,7 +38,8 @@ character = tk.StringVar(value=args['character'])
 ttk.Label(launcher, text="Character").pack(fill='x', expand=True)
 
 # ttk.Entry(launcher, textvariable=character).pack(fill='x', expand=True)
-ttk.Combobox(launcher,textvariable=character,value=characterList).pack(fill='x', expand=True)
+char_combo = ttk.Combobox(launcher, textvariable=character, value=characterList)
+char_combo.pack(fill='x', expand=True)
 
 input = tk.IntVar(value=args['input'])
 ttk.Label(launcher, text="Face Data Source").pack(fill='x', expand=True)
@@ -81,8 +81,9 @@ def launch():
     json.dump(args, f)
     f.close()
     if p is not None:
-        subprocess.run(['taskkill','/F','/PID',str(p.pid),'/T'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        p=None
+        subprocess.run(['taskkill', '/F', '/PID', str(p.pid), '/T'], stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
+        p = None
         launch_btn.config(text="Save & Launch")
     else:
         run_args = [os.path.join(os.getcwd(), 'venv', 'Scripts', 'python.exe'), 'main.py']
@@ -123,11 +124,23 @@ def launch():
 launch_btn = ttk.Button(launcher, text="Save & Launch", command=launch)
 launch_btn.pack(fill='x', expand=True, pady=10)
 
+
 def closeWindow():
     if p is not None:
-        subprocess.run(['taskkill','/F','/PID',str(p.pid),'/T'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        subprocess.run(['taskkill', '/F', '/PID', str(p.pid), '/T'], stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
     root.destroy()
 
 
+def handle_focus(event):
+    characterList = []
+    if event.widget == root:
+        for item in sorted(os.listdir('character'), key=lambda x: -os.path.getmtime(os.path.join('character', x))):
+            if '.png' == item[-4:]:
+                characterList.append(item[:-4])
+        char_combo.config(value=characterList)
+
+
+root.bind("<FocusIn>", handle_focus)
 root.protocol('WM_DELETE_WINDOW', closeWindow)
 root.mainloop()
