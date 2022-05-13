@@ -1,7 +1,10 @@
+import time
+
 import torch.nn as nn
 
 from tha2.poser.modes.mode_20 import load_face_morpher, load_face_rotater, load_combiner
 
+from args import args
 
 class TalkingAnimeLight(nn.Module):
     def __init__(self):
@@ -12,10 +15,21 @@ class TalkingAnimeLight(nn.Module):
 
     def forward(self, image, mouth_eye_vector, pose_vector):
         x = image.clone()
+        if args.perf:
+            tic=time.perf_counter()
         mouth_eye_morp_image = self.face_morpher(image[:, :, 32:224, 32:224], mouth_eye_vector)
+        if args.perf:
+            print(" - face_morpher",(time.perf_counter()-tic)*1000)
+            tic=time.perf_counter()
         x[:, :, 32:224, 32:224] = mouth_eye_morp_image
         rotate_image = self.two_algo_face_rotator(x, pose_vector)[:2]
+        if args.perf:
+            print(" - rotator",(time.perf_counter()-tic)*1000)
+            tic=time.perf_counter()
         output_image = self.combiner(rotate_image[0], rotate_image[1], pose_vector)
+        if args.perf:
+            print(" - combiner",(time.perf_counter()-tic)*1000)
+            tic=time.perf_counter()
         return output_image
 
 

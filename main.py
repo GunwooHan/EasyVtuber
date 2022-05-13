@@ -1,5 +1,3 @@
-import argparse
-
 import cv2
 import torch
 import pyvirtualcam
@@ -26,21 +24,7 @@ from pyanime4k import ac
 
 from tha2.mocap.ifacialmocap_constants import *
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--debug', action='store_true')
-parser.add_argument('--extend_movement', type=float)
-parser.add_argument('--input', type=str, default='cam')
-parser.add_argument('--character', type=str, default='y')
-parser.add_argument('--output_dir', type=str)
-parser.add_argument('--output_webcam', type=str)
-parser.add_argument('--output_size', type=str, default='256x256')
-parser.add_argument('--debug_input', action='store_true')
-parser.add_argument('--ifm', type=str)
-parser.add_argument('--anime4k', action='store_true')
-args = parser.parse_args()
-args.output_w = int(args.output_size.split('x')[0])
-args.output_h = int(args.output_size.split('x')[1])
-if args.output_webcam is None and args.output_dir is None: args.debug = True
+from args import args
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -150,10 +134,12 @@ class ClientProcess(Process):
 
 @torch.no_grad()
 def main():
-    model = TalkingAnimeLight().to(device)
-    model = model.eval()
-    model = model
-    print("Pretrained Model Loaded")
+    model = None
+    if not args.skip_model:
+        model = TalkingAnimeLight().to(device)
+        model = model.eval()
+        model = model
+        print("Pretrained Model Loaded")
     img = Image.open(f"character/{args.character}.png")
     wRatio = img.size[0] / 256
     img = img.resize((256, int(img.size[1] / wRatio)))
@@ -235,7 +221,7 @@ def main():
 
     pose_queue = []
     blender_data = create_default_blender_data()
-    tic=0
+    tic1 = 0
 
     print("Ready. Close this console to exit.")
 
@@ -244,21 +230,24 @@ def main():
         # input_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # results = facemesh.process(input_frame)
 
+        if args.perf:
+            print('===')
+            tic = time.perf_counter()
         if args.debug_input:
             mouth_eye_vector[0, :] = 0
             pose_vector[0, :] = 0
 
-            mouth_eye_vector[0, 2] = math.sin(time.perf_counter()*3)
-            mouth_eye_vector[0, 3] = math.sin(time.perf_counter()*3)
+            mouth_eye_vector[0, 2] = math.sin(time.perf_counter() * 3)
+            mouth_eye_vector[0, 3] = math.sin(time.perf_counter() * 3)
 
             mouth_eye_vector[0, 14] = 0
 
-            mouth_eye_vector[0, 25] = math.sin(time.perf_counter()*2.2)*0.2
-            mouth_eye_vector[0, 26] = math.sin(time.perf_counter()*3.5)*0.8
+            mouth_eye_vector[0, 25] = math.sin(time.perf_counter() * 2.2) * 0.2
+            mouth_eye_vector[0, 26] = math.sin(time.perf_counter() * 3.5) * 0.8
 
-            pose_vector[0, 0] = math.sin(time.perf_counter()*1.1)
-            pose_vector[0, 1] = math.sin(time.perf_counter()*1.2)
-            pose_vector[0, 2] = math.sin(time.perf_counter()*1.5)
+            pose_vector[0, 0] = math.sin(time.perf_counter() * 1.1)
+            pose_vector[0, 1] = math.sin(time.perf_counter() * 1.2)
+            pose_vector[0, 2] = math.sin(time.perf_counter() * 1.5)
 
 
         elif args.ifm is not None:
@@ -346,16 +335,32 @@ def main():
             pose_vector[0, 0] = (x_angle - 1.5) * 1.6
             pose_vector[0, 1] = y_angle * 2.0  # temp weight
             pose_vector[0, 2] = (z_angle + 1.5) * 2  # temp weight
-
-        output_image = model(input_image, mouth_eye_vector, pose_vector)
-        postprocessed_image = postprocessing_image(output_image.cpu())
+        if args.perf:
+            print("input", time.perf_counter() - tic)
+            tic = time.perf_counter()
+        if model is None:
+            output_image=input_image
+        else:
+            output_image = model(input_image, mouth_eye_vector, pose_vector)
+        if args.perf:
+            torch.cuda.synchronize()
+            print("model", (time.perf_counter() - tic) * 1000)
+            tic = time.perf_counter()
+        postprocessed_image = output_image.cpu()
+        if args.perf:
+            print("cpu()", (time.perf_counter() - tic) * 1000)
+            tic = time.perf_counter()
+        postprocessed_image = postprocessing_image(postprocessed_image)
+        if args.perf:
+            print("postprocess", (time.perf_counter() - tic) * 1000)
+            tic = time.perf_counter()
         if extra_image is not None:
             postprocessed_image = cv2.vconcat([postprocessed_image, extra_image])
 
-        k_scale=1
-        rotate_angle=0
-        dx=0
-        dy=0
+        k_scale = 1
+        rotate_angle = 0
+        dx = 0
+        dy = 0
         if args.extend_movement is not None:
             k_scale = position_vector[2] * math.sqrt(args.extend_movement) + 1
             rotate_angle = -position_vector[0] * 40 * args.extend_movement
@@ -370,6 +375,10 @@ def main():
             rm,
             (args.output_w, args.output_h))
 
+        if args.perf:
+            print("extendmovement", (time.perf_counter() - tic) * 1000)
+            tic = time.perf_counter()
+
         if args.anime4k:
             alpha_channel = postprocessed_image[:, :, 3]
             alpha_channel = cv2.resize(alpha_channel, None, fx=2, fy=2)
@@ -383,15 +392,17 @@ def main():
             postprocessed_image = a.save_image_to_numpy()
             postprocessed_image = cv2.merge((postprocessed_image, alpha_channel))
             postprocessed_image = cv2.cvtColor(postprocessed_image, cv2.COLOR_BGRA2RGBA)
-
+            if args.perf:
+                print("anime4k", (time.perf_counter() - tic) * 1000)
+                tic = time.perf_counter()
         if args.debug:
             output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGRA)
             # resized_frame = cv2.resize(output_frame, (np.min(debug_image.shape[:2]), np.min(debug_image.shape[:2])))
             # output_frame = np.concatenate([debug_image, resized_frame], axis=1)
             toc = time.perf_counter()
-            fps = 1 / (toc - tic)
-            tic = toc
-            cv2.putText(output_frame, str('%.1f' % fps),(0,16),cv2.FONT_HERSHEY_PLAIN,1,(0,255,0),1)
+            fps = 1 / (toc - tic1)
+            tic1 = toc
+            cv2.putText(output_frame, str('%.1f' % fps), (0, 16), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             cv2.imshow("frame", output_frame)
             # cv2.imshow("camera", debug_image)
             cv2.waitKey(1)
@@ -404,7 +415,9 @@ def main():
                 result_image = cv2.cvtColor(result_image, cv2.COLOR_RGBA2RGB)
             cam.send(result_image)
             cam.sleep_until_next_frame()
-
+        if args.perf:
+            print("output", (time.perf_counter() - tic) * 1000)
+            tic = time.perf_counter()
 
 
 if __name__ == '__main__':
