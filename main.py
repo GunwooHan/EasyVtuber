@@ -17,6 +17,7 @@ import queue
 import socket
 import time
 import math
+from collections import OrderedDict
 from multiprocessing import Value, Process, Queue
 
 import pyanime4k
@@ -26,7 +27,7 @@ from tha2.mocap.ifacialmocap_constants import *
 
 from args import args
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device('cuda') if torch.cuda.is_available() and not args.skip_model else torch.device('cpu')
 
 
 def create_default_blender_data():
@@ -53,7 +54,7 @@ def create_default_blender_data():
     return data
 
 
-class ClientProcess(Process):
+class IFMClientProcess(Process):
     def __init__(self):
         super().__init__()
         self.queue = Queue()
@@ -156,7 +157,7 @@ def main():
     if not args.debug_input:
 
         if args.ifm is not None:
-            client_process = ClientProcess()
+            client_process = IFMClientProcess()
             client_process.daemon = True
             client_process.start()
             ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
@@ -209,6 +210,8 @@ def main():
 
     mouth_eye_vector = torch.empty(1, 27)
     pose_vector = torch.empty(1, 3)
+    mouth_eye_vector_c = [0.0]*27
+    pose_vector_c = [0.0]*3
 
     # input_image = input_image.half()
     # mouth_eye_vector = mouth_eye_vector.half()
@@ -223,6 +226,13 @@ def main():
     blender_data = create_default_blender_data()
     tic1 = 0
 
+    vector_hash=None
+    prev_hash=None
+    changed_count=0
+    missed_count=0
+    tot_count=0
+    model_cache=OrderedDict()
+
     print("Ready. Close this console to exit.")
 
     while True:
@@ -234,20 +244,21 @@ def main():
             print('===')
             tic = time.perf_counter()
         if args.debug_input:
-            mouth_eye_vector[0, :] = 0
-            pose_vector[0, :] = 0
+            mouth_eye_vector_c = [0.0]*27
+            pose_vector_c = [0.0]*3
 
-            mouth_eye_vector[0, 2] = math.sin(time.perf_counter() * 3)
-            mouth_eye_vector[0, 3] = math.sin(time.perf_counter() * 3)
+            mouth_eye_vector_c[2] = math.sin(time.perf_counter() * 3)
+            mouth_eye_vector_c[3] = math.sin(time.perf_counter() * 3)
 
-            mouth_eye_vector[0, 14] = 0
+            mouth_eye_vector_c[14] = 0
 
-            mouth_eye_vector[0, 25] = math.sin(time.perf_counter() * 2.2) * 0.2
-            mouth_eye_vector[0, 26] = math.sin(time.perf_counter() * 3.5) * 0.8
+            mouth_eye_vector_c[25] = math.sin(time.perf_counter() * 2.2) * 0.2
+            mouth_eye_vector_c[26] = math.sin(time.perf_counter() * 3.5) * 0.8
 
-            pose_vector[0, 0] = math.sin(time.perf_counter() * 1.1)
-            pose_vector[0, 1] = math.sin(time.perf_counter() * 1.2)
-            pose_vector[0, 2] = math.sin(time.perf_counter() * 1.5)
+            pose_vector_c[0] = math.sin(time.perf_counter() * 1.1)
+            pose_vector_c[1] = math.sin(time.perf_counter() * 1.2)
+            pose_vector_c[2] = math.sin(time.perf_counter() * 1.5)
+
 
 
         elif args.ifm is not None:
@@ -258,7 +269,7 @@ def main():
                     new_blender_data = client_process.queue.get_nowait()
                 blender_data = new_blender_data
             except queue.Empty:
-                pass
+                continue
 
             ifacialmocap_pose_converted = ifm_converter.convert(blender_data)
 
@@ -281,11 +292,15 @@ def main():
             #                - ifacialmocap_pose[EYE_LOOK_DOWN_RIGHT]
             #                + ifacialmocap_pose[EYE_LOOK_DOWN_LEFT]) / 2.0 / 0.75
 
-            position_vector = blender_data[HEAD_BONE_QUAT]
+            mouth_eye_vector_c = [0.0]*27
+            pose_vector_c = [0.0]*3
             for i in range(12, 39):
-                mouth_eye_vector[0, i - 12] = ifacialmocap_pose_converted[i]
+                mouth_eye_vector_c[i - 12] = ifacialmocap_pose_converted[i]
             for i in range(39, 42):
-                pose_vector[0, i - 39] = ifacialmocap_pose_converted[i]
+                pose_vector_c[i - 39] = ifacialmocap_pose_converted[i]
+
+            position_vector = blender_data[HEAD_BONE_QUAT]
+
 
         else:
             ret, frame = cap.read()
@@ -321,23 +336,45 @@ def main():
             y_angle = np_pose[6]
             z_angle = np_pose[7]
 
-            mouth_eye_vector[0, :] = 0
-            pose_vector[0, :] = 0
+            mouth_eye_vector_c = [0.0] * 27
+            pose_vector_c = [0.0] * 3
 
-            mouth_eye_vector[0, 2] = eye_l_h_temp
-            mouth_eye_vector[0, 3] = eye_r_h_temp
+            mouth_eye_vector_c[2] = eye_l_h_temp
+            mouth_eye_vector_c[3] = eye_r_h_temp
 
-            mouth_eye_vector[0, 14] = mouth_ratio * 1.5
+            mouth_eye_vector_c[14] = mouth_ratio * 1.5
 
-            mouth_eye_vector[0, 25] = eye_y_ratio
-            mouth_eye_vector[0, 26] = eye_x_ratio
+            mouth_eye_vector_c[25] = eye_y_ratio
+            mouth_eye_vector_c[26] = eye_x_ratio
 
-            pose_vector[0, 0] = (x_angle - 1.5) * 1.6
-            pose_vector[0, 1] = y_angle * 2.0  # temp weight
-            pose_vector[0, 2] = (z_angle + 1.5) * 2  # temp weight
+            pose_vector_c[0] = (x_angle - 1.5) * 1.6
+            pose_vector_c[1] = y_angle * 2.0  # temp weight
+            pose_vector_c[2] = (z_angle + 1.5) * 2  # temp weight
+
         if args.perf:
             print("input", time.perf_counter() - tic)
             tic = time.perf_counter()
+
+        hash_arr=mouth_eye_vector_c
+        hash_arr.extend(pose_vector_c)
+        vector_hash=hash(tuple(hash_arr))
+        tot_count+=1
+        if vector_hash==prev_hash: continue
+        # print("hash", vector_hash)
+        if vector_hash!=prev_hash: changed_count+=1
+        prev_hash=vector_hash
+        if model_cache.get(vector_hash) is None:
+            model_cache[vector_hash]=True
+            missed_count+=1
+        #
+        # print('changed ratio',changed_count/tot_count*100)
+        # print('missed ratio',missed_count/tot_count*100)
+
+        for i in range(27):
+            mouth_eye_vector[0,i]=mouth_eye_vector_c[i]
+        for i in range(3):
+            pose_vector[0,i]=pose_vector_c[i]
+        torch.cuda.synchronize()
         if model is None:
             output_image=input_image
         else:
@@ -403,6 +440,7 @@ def main():
             fps = 1 / (toc - tic1)
             tic1 = toc
             cv2.putText(output_frame, str('%.1f' % fps), (0, 16), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            # cv2.putText(output_frame, str('%.1f' % (missed_count/changed_count*100)), (0, 48), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             cv2.imshow("frame", output_frame)
             # cv2.imshow("camera", debug_image)
             cv2.waitKey(1)
