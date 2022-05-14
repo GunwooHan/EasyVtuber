@@ -166,6 +166,8 @@ class ModelClientProcess(Process):
                 continue
             if input is None: continue
 
+            if args.perf:
+                tic = time.perf_counter()
             for i in range(27):
                 mouth_eye_vector[0, i] = input[i]
             for i in range(3):
@@ -234,9 +236,12 @@ def main():
 
     if args.output_webcam:
         cam_scale = 1
+        cam_width_scale=1
         if args.anime4k:
             cam_scale = 2
-        cam = pyvirtualcam.Camera(width=args.output_w * cam_scale, height=args.output_h * cam_scale, fps=60,
+        if args.alpha_split:
+            cam_width_scale=2
+        cam = pyvirtualcam.Camera(width=args.output_w * cam_scale * cam_width_scale, height=args.output_h * cam_scale, fps=60,
                                   backend=args.output_webcam,
                                   fmt=
                                   {'unitycapture': pyvirtualcam.PixelFormat.RGBA, 'obs': pyvirtualcam.PixelFormat.RGB}[
@@ -288,7 +293,6 @@ def main():
         # results = facemesh.process(input_frame)
 
         if args.perf:
-            print('===')
             tic = time.perf_counter()
         if args.debug_input:
             mouth_eye_vector_c = [0.0] * 27
@@ -316,7 +320,7 @@ def main():
                     new_blender_data = client_process.queue.get_nowait()
                 blender_data = new_blender_data
             except queue.Empty:
-                continue
+                pass
 
             ifacialmocap_pose_converted = ifm_converter.convert(blender_data)
 
@@ -398,15 +402,14 @@ def main():
             pose_vector_c[1] = y_angle * 2.0  # temp weight
             pose_vector_c[2] = (z_angle + 1.5) * 2  # temp weight
 
-        if args.perf:
-            print("input", time.perf_counter() - tic)
-            tic = time.perf_counter()
 
         model_input_arr = mouth_eye_vector_c
         model_input_arr.extend(pose_vector_c)
         vector_hash = hash(tuple(model_input_arr))
         tot_count += 1
-        if vector_hash == prev_hash: continue
+        if vector_hash == prev_hash:
+            continue
+
         # print("hash", vector_hash)
         if vector_hash != prev_hash: changed_count += 1
         prev_hash = vector_hash
@@ -426,8 +429,15 @@ def main():
             model_output = new_model_output
         except queue.Empty:
             pass
-        if model_output is None: continue
+        if model_output is None:
+            time.sleep(1)
+            continue
         postprocessed_image=model_output
+
+        if args.perf:
+            print('===')
+            print("input", time.perf_counter() - tic)
+            tic = time.perf_counter()
 
         if extra_image is not None:
             postprocessed_image = cv2.vconcat([postprocessed_image, extra_image])
@@ -470,6 +480,11 @@ def main():
             if args.perf:
                 print("anime4k", (time.perf_counter() - tic) * 1000)
                 tic = time.perf_counter()
+        if args.alpha_split:
+            alpha_image=cv2.merge([postprocessed_image[:, :, 3],postprocessed_image[:, :, 3],postprocessed_image[:, :, 3]])
+            alpha_image=cv2.cvtColor(alpha_image, cv2.COLOR_RGB2RGBA)
+            postprocessed_image=cv2.hconcat([postprocessed_image,alpha_image])
+
         if args.debug:
             output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGRA)
             # resized_frame = cv2.resize(output_frame, (np.min(debug_image.shape[:2]), np.min(debug_image.shape[:2])))
