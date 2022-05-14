@@ -407,8 +407,9 @@ def main():
         model_input_arr.extend(pose_vector_c)
         vector_hash = hash(tuple(model_input_arr))
         tot_count += 1
-        if vector_hash == prev_hash:
-            continue
+        should_output=False
+        if vector_hash != prev_hash:
+            should_output=True
 
         # print("hash", vector_hash)
         if vector_hash != prev_hash: changed_count += 1
@@ -422,9 +423,11 @@ def main():
 
         model_process.input_queue.put_nowait(model_input_arr)
 
+        has_model_output=0
         try:
             new_model_output = model_output
             while not model_process.output_queue.empty():
+                has_model_output+=1
                 new_model_output = model_process.output_queue.get_nowait()
             model_output = new_model_output
         except queue.Empty:
@@ -432,6 +435,11 @@ def main():
         if model_output is None:
             time.sleep(1)
             continue
+        # print(has_model_output)
+        # should_output=should_output or has_model_output
+        # if not should_output:
+        #     continue
+
         postprocessed_image=model_output
 
         if args.perf:

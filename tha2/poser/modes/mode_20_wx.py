@@ -268,11 +268,13 @@ class IFacialMocapPoseConverter20(IFacialMocapPoseConverter):
                 #    [decomp.item(0), decomp.item(1), decomp.item(2), decomp.item(3)])
                 pose[self.mouth_aaa_index] = restricted_decomp[0]
                 pose[self.mouth_iii_index] = restricted_decomp[1]
-                mouth_funnel_denom = self.args.mouth_funnel_max_value - self.args.mouth_funnel_min_value
-                ooo_alpha = clamp((mouth_funnel - self.args.mouth_funnel_min_value) / mouth_funnel_denom, 0.0, 1.0)
+                # mouth_funnel_denom = self.args.mouth_funnel_max_value - self.args.mouth_funnel_min_value
+                # ooo_alpha = clamp((mouth_funnel - self.args.mouth_funnel_min_value) / mouth_funnel_denom, 0.0, 1.0)
+                ooo_alpha=1
                 uo_value = clamp(restricted_decomp[2] + restricted_decomp[3], 0.0, 1.0)
                 pose[self.mouth_uuu_index] = uo_value * (1.0 - ooo_alpha)
                 pose[self.mouth_ooo_index] = uo_value * ooo_alpha
+                print(pose[self.mouth_aaa_index:self.mouth_ooo_index+1])
                 # pose[28] = restricted_decomp[2]
                 # pose[30] = restricted_decomp[3]
 
