@@ -90,7 +90,6 @@ class IFMClientProcess(Process):
                     raise e
             socket_string = socket_bytes.decode("utf-8")
             # print(socket_string)
-
             # blender_data = json.loads(socket_string)
             data = self.convert_from_blender_data(socket_string)
             # cur_time = time.perf_counter()
@@ -133,14 +132,69 @@ class IFMClientProcess(Process):
         return data
 
 
+class ModelClientProcess(Process):
+    def __init__(self, input_image):
+        super().__init__()
+        self.should_terminate = Value('b', False)
+        self.updated=Value('b', False)
+        self.data = None
+        self.input_image = input_image
+        self.output_queue=Queue()
+        self.input_queue=Queue()
+
+    def run(self):
+        model = None
+        if not args.skip_model:
+            model = TalkingAnimeLight().to(device)
+            model = model.eval()
+            model = model
+            print("Pretrained Model Loaded")
+
+        mouth_eye_vector = torch.empty(1, 27)
+        pose_vector = torch.empty(1, 3)
+
+        input_image = self.input_image.to(device)
+        mouth_eye_vector = mouth_eye_vector.to(device)
+        pose_vector = pose_vector.to(device)
+
+        while True:
+            input = None
+            try:
+                while not self.input_queue.empty():
+                    input = self.input_queue.get_nowait()
+            except queue.Empty:
+                continue
+            if input is None: continue
+
+            for i in range(27):
+                mouth_eye_vector[0, i] = input[i]
+            for i in range(3):
+                pose_vector[0, i] = input[i+27]
+            if model is None:
+                output_image = input_image
+            else:
+                output_image = model(input_image, mouth_eye_vector, pose_vector)
+            if args.perf:
+                torch.cuda.synchronize()
+                print("model", (time.perf_counter() - tic) * 1000)
+                tic = time.perf_counter()
+            postprocessed_image = output_image.cpu()
+            if args.perf:
+                print("cpu()", (time.perf_counter() - tic) * 1000)
+                tic = time.perf_counter()
+            postprocessed_image = postprocessing_image(postprocessed_image)
+            if args.perf:
+                print("postprocess", (time.perf_counter() - tic) * 1000)
+                tic = time.perf_counter()
+
+            self.output_queue.put_nowait(postprocessed_image)
+
+
+
+
+
 @torch.no_grad()
 def main():
-    model = None
-    if not args.skip_model:
-        model = TalkingAnimeLight().to(device)
-        model = model.eval()
-        model = model
-        print("Pretrained Model Loaded")
     img = Image.open(f"character/{args.character}.png")
     wRatio = img.size[0] / 256
     img = img.resize((256, int(img.size[1] / wRatio)))
@@ -182,7 +236,7 @@ def main():
         cam_scale = 1
         if args.anime4k:
             cam_scale = 2
-        cam = pyvirtualcam.Camera(width=args.output_w * cam_scale, height=args.output_h * cam_scale, fps=30,
+        cam = pyvirtualcam.Camera(width=args.output_w * cam_scale, height=args.output_h * cam_scale, fps=60,
                                   backend=args.output_webcam,
                                   fmt=
                                   {'unitycapture': pyvirtualcam.PixelFormat.RGBA, 'obs': pyvirtualcam.PixelFormat.RGB}[
@@ -208,30 +262,23 @@ def main():
         a.set_arguments(parameters)
         print("Anime4K Loaded")
 
-    mouth_eye_vector = torch.empty(1, 27)
-    pose_vector = torch.empty(1, 3)
-    mouth_eye_vector_c = [0.0]*27
-    pose_vector_c = [0.0]*3
-
-    # input_image = input_image.half()
-    # mouth_eye_vector = mouth_eye_vector.half()
-    # pose_vector = pose_vector.half()
-
-    input_image = input_image.to(device)
-    mouth_eye_vector = mouth_eye_vector.to(device)
-    pose_vector = pose_vector.to(device)
     position_vector = [0, 0, 0, 1]
 
     pose_queue = []
     blender_data = create_default_blender_data()
     tic1 = 0
 
-    vector_hash=None
-    prev_hash=None
-    changed_count=0
-    missed_count=0
-    tot_count=0
-    model_cache=OrderedDict()
+    model_output=None
+    model_process=ModelClientProcess(input_image)
+    model_process.daemon = True
+    model_process.start()
+
+    vector_hash = None
+    prev_hash = None
+    changed_count = 0
+    missed_count = 0
+    tot_count = 0
+    model_cache = OrderedDict()
 
     print("Ready. Close this console to exit.")
 
@@ -244,8 +291,8 @@ def main():
             print('===')
             tic = time.perf_counter()
         if args.debug_input:
-            mouth_eye_vector_c = [0.0]*27
-            pose_vector_c = [0.0]*3
+            mouth_eye_vector_c = [0.0] * 27
+            pose_vector_c = [0.0] * 3
 
             mouth_eye_vector_c[2] = math.sin(time.perf_counter() * 3)
             mouth_eye_vector_c[3] = math.sin(time.perf_counter() * 3)
@@ -292,8 +339,8 @@ def main():
             #                - ifacialmocap_pose[EYE_LOOK_DOWN_RIGHT]
             #                + ifacialmocap_pose[EYE_LOOK_DOWN_LEFT]) / 2.0 / 0.75
 
-            mouth_eye_vector_c = [0.0]*27
-            pose_vector_c = [0.0]*3
+            mouth_eye_vector_c = [0.0] * 27
+            pose_vector_c = [0.0] * 3
             for i in range(12, 39):
                 mouth_eye_vector_c[i - 12] = ifacialmocap_pose_converted[i]
             for i in range(39, 42):
@@ -355,42 +402,33 @@ def main():
             print("input", time.perf_counter() - tic)
             tic = time.perf_counter()
 
-        hash_arr=mouth_eye_vector_c
-        hash_arr.extend(pose_vector_c)
-        vector_hash=hash(tuple(hash_arr))
-        tot_count+=1
-        if vector_hash==prev_hash: continue
+        model_input_arr = mouth_eye_vector_c
+        model_input_arr.extend(pose_vector_c)
+        vector_hash = hash(tuple(model_input_arr))
+        tot_count += 1
+        if vector_hash == prev_hash: continue
         # print("hash", vector_hash)
-        if vector_hash!=prev_hash: changed_count+=1
-        prev_hash=vector_hash
+        if vector_hash != prev_hash: changed_count += 1
+        prev_hash = vector_hash
         if model_cache.get(vector_hash) is None:
-            model_cache[vector_hash]=True
-            missed_count+=1
+            model_cache[vector_hash] = True
+            missed_count += 1
         #
         # print('changed ratio',changed_count/tot_count*100)
         # print('missed ratio',missed_count/tot_count*100)
 
-        for i in range(27):
-            mouth_eye_vector[0,i]=mouth_eye_vector_c[i]
-        for i in range(3):
-            pose_vector[0,i]=pose_vector_c[i]
-        torch.cuda.synchronize()
-        if model is None:
-            output_image=input_image
-        else:
-            output_image = model(input_image, mouth_eye_vector, pose_vector)
-        if args.perf:
-            torch.cuda.synchronize()
-            print("model", (time.perf_counter() - tic) * 1000)
-            tic = time.perf_counter()
-        postprocessed_image = output_image.cpu()
-        if args.perf:
-            print("cpu()", (time.perf_counter() - tic) * 1000)
-            tic = time.perf_counter()
-        postprocessed_image = postprocessing_image(postprocessed_image)
-        if args.perf:
-            print("postprocess", (time.perf_counter() - tic) * 1000)
-            tic = time.perf_counter()
+        model_process.input_queue.put_nowait(model_input_arr)
+
+        try:
+            new_model_output = model_output
+            while not model_process.output_queue.empty():
+                new_model_output = model_process.output_queue.get_nowait()
+            model_output = new_model_output
+        except queue.Empty:
+            pass
+        if model_output is None: continue
+        postprocessed_image=model_output
+
         if extra_image is not None:
             postprocessed_image = cv2.vconcat([postprocessed_image, extra_image])
 
