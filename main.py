@@ -20,7 +20,6 @@ import math
 from collections import OrderedDict
 from multiprocessing import Value, Process, Queue
 
-import pyanime4k
 from pyanime4k import ac
 
 from tha2.mocap.ifacialmocap_constants import *
@@ -157,6 +156,10 @@ class ModelClientProcess(Process):
         mouth_eye_vector = mouth_eye_vector.to(device)
         pose_vector = pose_vector.to(device)
 
+        model_cache = OrderedDict()
+        tot = 0
+        hit = 0
+
         while True:
             input = None
             try:
@@ -165,31 +168,41 @@ class ModelClientProcess(Process):
             except queue.Empty:
                 continue
             if input is None: continue
-
-            if args.perf:
-                tic = time.perf_counter()
-            for i in range(27):
-                mouth_eye_vector[0, i] = input[i]
-            for i in range(3):
-                pose_vector[0, i] = input[i+27]
-            if model is None:
-                output_image = input_image
+            input=[round(x*100)/100 for x in input]
+            input_hash=hash(tuple(input))
+            cached=model_cache.get(input_hash)
+            tot+=1
+            if not cached is None:
+                self.output_queue.put_nowait(cached)
+                model_cache.move_to_end(input_hash)
+                hit+=1
+                print('cached',hit/tot*100)
             else:
-                output_image = model(input_image, mouth_eye_vector, pose_vector)
-            if args.perf:
-                torch.cuda.synchronize()
-                print("model", (time.perf_counter() - tic) * 1000)
-                tic = time.perf_counter()
-            postprocessed_image = output_image.cpu()
-            if args.perf:
-                print("cpu()", (time.perf_counter() - tic) * 1000)
-                tic = time.perf_counter()
-            postprocessed_image = postprocessing_image(postprocessed_image)
-            if args.perf:
-                print("postprocess", (time.perf_counter() - tic) * 1000)
-                tic = time.perf_counter()
+                if args.perf:
+                    tic = time.perf_counter()
+                for i in range(27):
+                    mouth_eye_vector[0, i] = input[i]
+                for i in range(3):
+                    pose_vector[0, i] = input[i+27]
+                if model is None:
+                    output_image = input_image
+                else:
+                    output_image = model(input_image, mouth_eye_vector, pose_vector)
+                if args.perf:
+                    torch.cuda.synchronize()
+                    print("model", (time.perf_counter() - tic) * 1000)
+                    tic = time.perf_counter()
+                postprocessed_image = output_image.cpu()
+                if args.perf:
+                    print("cpu()", (time.perf_counter() - tic) * 1000)
+                    tic = time.perf_counter()
+                postprocessed_image = postprocessing_image(postprocessed_image)
+                if args.perf:
+                    print("postprocess", (time.perf_counter() - tic) * 1000)
+                    tic = time.perf_counter()
 
-            self.output_queue.put_nowait(postprocessed_image)
+                model_cache[input_hash]=postprocessed_image
+                self.output_queue.put_nowait(postprocessed_image)
 
 
 
@@ -277,13 +290,6 @@ def main():
     model_process=ModelClientProcess(input_image)
     model_process.daemon = True
     model_process.start()
-
-    vector_hash = None
-    prev_hash = None
-    changed_count = 0
-    missed_count = 0
-    tot_count = 0
-    model_cache = OrderedDict()
 
     print("Ready. Close this console to exit.")
 
@@ -405,21 +411,6 @@ def main():
 
         model_input_arr = mouth_eye_vector_c
         model_input_arr.extend(pose_vector_c)
-        vector_hash = hash(tuple(model_input_arr))
-        tot_count += 1
-        should_output=False
-        if vector_hash != prev_hash:
-            should_output=True
-
-        # print("hash", vector_hash)
-        if vector_hash != prev_hash: changed_count += 1
-        prev_hash = vector_hash
-        if model_cache.get(vector_hash) is None:
-            model_cache[vector_hash] = True
-            missed_count += 1
-        #
-        # print('changed ratio',changed_count/tot_count*100)
-        # print('missed ratio',missed_count/tot_count*100)
 
         model_process.input_queue.put_nowait(model_input_arr)
 
