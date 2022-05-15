@@ -17,6 +17,7 @@ import queue
 import socket
 import time
 import math
+import re
 from collections import OrderedDict
 from multiprocessing import Value, Process, Queue
 
@@ -201,11 +202,11 @@ class ModelClientProcess(Process):
                     print("postprocess", (time.perf_counter() - tic) * 1000)
                     tic = time.perf_counter()
 
-                model_cache[input_hash]=postprocessed_image
                 self.output_queue.put_nowait(postprocessed_image)
-
-
-
+                if args.max_cache_len>0:
+                    model_cache[input_hash]=postprocessed_image
+                    if len(model_cache)>args.max_cache_len:
+                        model_cache.popitem(0)
 
 
 @torch.no_grad()
