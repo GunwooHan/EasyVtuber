@@ -177,7 +177,8 @@ class ModelClientProcess(Process):
                 self.output_queue.put_nowait(cached)
                 model_cache.move_to_end(input_hash)
                 hit+=1
-                print('cached',hit/tot*100)
+                if args.perf:
+                    print('cached',str(hit/tot*100)+'%')
             else:
                 if args.perf:
                     tic = time.perf_counter()
