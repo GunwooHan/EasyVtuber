@@ -263,7 +263,17 @@ class ModelClientProcess(Process):
                                                                                  ifm_converter.eye_happy_wink_left_index - 12] / 2
                 model_input[ifm_converter.eye_happy_wink_left_index - 12] = model_input[
                                                                                 ifm_converter.eye_happy_wink_left_index - 12] / 2
-
+                model_input[ifm_converter.mouth_aaa_index - 12] = min(
+                    model_input[ifm_converter.mouth_aaa_index - 12]+
+                    model_input[ifm_converter.mouth_ooo_index - 12]/2+
+                    model_input[ifm_converter.mouth_iii_index - 12]/2+
+                    model_input[ifm_converter.mouth_uuu_index - 12]/2,1
+                )
+                model_input[ifm_converter.mouth_ooo_index - 12]=0
+                model_input[ifm_converter.mouth_iii_index - 12]=0
+                model_input[ifm_converter.mouth_uuu_index - 12]=0
+            for i in range(4,args.simplify):
+                simplify_arr=[max(math.ceil(x*0.8),5)for x in simplify_arr]
             for i in range(12, len(simplify_arr)):
                 if simplify_arr[i] > 0:
                     model_input[i - 12] = round(model_input[i - 12] * simplify_arr[i]) / simplify_arr[i]
