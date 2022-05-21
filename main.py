@@ -56,6 +56,7 @@ def create_default_blender_data():
 
 ifm_converter = tha2.poser.modes.mode_20_wx.IFacialMocapPoseConverter20()
 
+
 class IFMClientProcess(Process):
     def __init__(self):
         super().__init__()
@@ -138,11 +139,11 @@ class ModelClientProcess(Process):
     def __init__(self, input_image):
         super().__init__()
         self.should_terminate = Value('b', False)
-        self.updated=Value('b', False)
+        self.updated = Value('b', False)
         self.data = None
         self.input_image = input_image
-        self.output_queue=Queue()
-        self.input_queue=Queue()
+        self.output_queue = Queue()
+        self.input_queue = Queue()
 
     def run(self):
         model = None
@@ -164,32 +165,88 @@ class ModelClientProcess(Process):
         hit = 0
 
         while True:
-            input = None
+            model_input = None
             try:
                 while not self.input_queue.empty():
-                    input = self.input_queue.get_nowait()
+                    model_input = self.input_queue.get_nowait()
             except queue.Empty:
                 continue
-            if input is None: continue
-            input=[round(x*100)/100 for x in input]
-            input[ifm_converter.iris_rotation_y_index - 12]=round(input[ifm_converter.iris_rotation_y_index - 12]*100)/100
-            input[ifm_converter.iris_rotation_x_index - 12]=round(input[ifm_converter.iris_rotation_x_index - 12]*100)/100
-            input_hash=hash(tuple(input))
-            cached=model_cache.get(input_hash)
-            tot+=1
+            if model_input is None: continue
+            simplify_arr = [1000] * ifm_converter.pose_size
+            if args.simplify >= 1:
+                simplify_arr = [200] * ifm_converter.pose_size
+                simplify_arr[ifm_converter.eye_wink_left_index] = 50
+                simplify_arr[ifm_converter.eye_wink_right_index] = 50
+                simplify_arr[ifm_converter.eye_happy_wink_left_index] = 50
+                simplify_arr[ifm_converter.eye_happy_wink_right_index] = 50
+                simplify_arr[ifm_converter.eye_surprised_left_index] = 30
+                simplify_arr[ifm_converter.eye_surprised_right_index] = 30
+                simplify_arr[ifm_converter.iris_rotation_x_index] = 25
+                simplify_arr[ifm_converter.iris_rotation_y_index] = 25
+                simplify_arr[ifm_converter.eye_raised_lower_eyelid_left_index] = 10
+                simplify_arr[ifm_converter.eye_raised_lower_eyelid_right_index] = 10
+                simplify_arr[ifm_converter.mouth_lowered_corner_left_index] = 5
+                simplify_arr[ifm_converter.mouth_lowered_corner_right_index] = 5
+                simplify_arr[ifm_converter.mouth_raised_corner_left_index] = 5
+                simplify_arr[ifm_converter.mouth_raised_corner_right_index] = 5
+            if args.simplify >= 2:
+                simplify_arr[ifm_converter.head_x_index]=100
+                simplify_arr[ifm_converter.head_y_index]=100
+                simplify_arr[ifm_converter.eye_surprised_left_index] = 10
+                simplify_arr[ifm_converter.eye_surprised_right_index] = 10
+                model_input[ifm_converter.eye_wink_left_index - 12] += model_input[
+                    ifm_converter.eye_happy_wink_left_index - 12]
+                model_input[ifm_converter.eye_happy_wink_left_index - 12] = model_input[
+                                                                                ifm_converter.eye_wink_left_index - 12] / 2
+                model_input[ifm_converter.eye_wink_left_index - 12] = model_input[
+                                                                          ifm_converter.eye_wink_left_index - 12] / 2
+                model_input[ifm_converter.eye_wink_right_index - 12] += model_input[
+                    ifm_converter.eye_happy_wink_right_index - 12]
+                model_input[ifm_converter.eye_happy_wink_right_index - 12] = model_input[
+                                                                                 ifm_converter.eye_wink_right_index - 12] / 2
+                model_input[ifm_converter.eye_wink_right_index - 12] = model_input[
+                                                                           ifm_converter.eye_wink_right_index - 12] / 2
+
+                uosum = model_input[ifm_converter.mouth_uuu_index - 12] + \
+                        model_input[ifm_converter.mouth_ooo_index - 12]
+                model_input[ifm_converter.mouth_ooo_index - 12] = uosum
+                model_input[ifm_converter.mouth_uuu_index - 12] = 0
+                is_open = (model_input[ifm_converter.mouth_aaa_index - 12] + model_input[
+                    ifm_converter.mouth_iii_index - 12] + uosum) > 0
+                model_input[ifm_converter.mouth_lowered_corner_left_index - 12] = 0
+                model_input[ifm_converter.mouth_lowered_corner_right_index - 12] = 0
+                model_input[ifm_converter.mouth_raised_corner_left_index - 12] = 0.5 if is_open else 0
+                model_input[ifm_converter.mouth_raised_corner_right_index - 12] = 0.5 if is_open else 0
+                simplify_arr[ifm_converter.mouth_lowered_corner_left_index] = 0
+                simplify_arr[ifm_converter.mouth_lowered_corner_right_index] = 0
+                simplify_arr[ifm_converter.mouth_raised_corner_left_index] = 0
+                simplify_arr[ifm_converter.mouth_raised_corner_right_index] = 0
+            if args.simplify >= 3:
+                simplify_arr[ifm_converter.iris_rotation_x_index] = 20
+                simplify_arr[ifm_converter.iris_rotation_y_index] = 20
+                simplify_arr[ifm_converter.eye_wink_left_index] = 25
+                simplify_arr[ifm_converter.eye_wink_right_index] = 25
+                simplify_arr[ifm_converter.eye_happy_wink_left_index] = 25
+                simplify_arr[ifm_converter.eye_happy_wink_right_index] = 25
+            for i in range(12, len(simplify_arr)):
+                if simplify_arr[i] > 0:
+                    model_input[i - 12] = round(model_input[i - 12] * simplify_arr[i]) / simplify_arr[i]
+            input_hash = hash(tuple(model_input))
+            cached = model_cache.get(input_hash)
+            tot += 1
             if not cached is None:
                 self.output_queue.put_nowait(cached)
                 model_cache.move_to_end(input_hash)
-                hit+=1
-                if (args.perf)or hit%100==0:
-                    print('cached',str(hit/tot*100)+'%')
+                hit += 1
+                if (args.perf) or hit % 10 == 0:
+                    print('cached', str(hit / tot * 100) + '%')
             else:
                 if args.perf:
                     tic = time.perf_counter()
                 for i in range(27):
-                    mouth_eye_vector[0, i] = input[i]
+                    mouth_eye_vector[0, i] = model_input[i]
                 for i in range(3):
-                    pose_vector[0, i] = input[i+27]
+                    pose_vector[0, i] = model_input[i + 27]
                 if model is None:
                     output_image = input_image
                 else:
@@ -208,9 +265,9 @@ class ModelClientProcess(Process):
                     tic = time.perf_counter()
 
                 self.output_queue.put_nowait(postprocessed_image)
-                if args.max_cache_len>0:
-                    model_cache[input_hash]=postprocessed_image
-                    if len(model_cache)>args.max_cache_len:
+                if args.max_cache_len > 0:
+                    model_cache[input_hash] = postprocessed_image
+                    if len(model_cache) > args.max_cache_len:
                         model_cache.popitem(0)
 
 
@@ -252,12 +309,13 @@ def main():
 
     if args.output_webcam:
         cam_scale = 1
-        cam_width_scale=1
+        cam_width_scale = 1
         if args.anime4k:
             cam_scale = 2
         if args.alpha_split:
-            cam_width_scale=2
-        cam = pyvirtualcam.Camera(width=args.output_w * cam_scale * cam_width_scale, height=args.output_h * cam_scale, fps=60,
+            cam_width_scale = 2
+        cam = pyvirtualcam.Camera(width=args.output_w * cam_scale * cam_width_scale, height=args.output_h * cam_scale,
+                                  fps=60,
                                   backend=args.output_webcam,
                                   fmt=
                                   {'unitycapture': pyvirtualcam.PixelFormat.RGBA, 'obs': pyvirtualcam.PixelFormat.RGB}[
@@ -289,8 +347,8 @@ def main():
     blender_data = create_default_blender_data()
     tic1 = 0
 
-    model_output=None
-    model_process=ModelClientProcess(input_image)
+    model_output = None
+    model_process = ModelClientProcess(input_image)
     model_process.daemon = True
     model_process.start()
 
@@ -411,17 +469,16 @@ def main():
             pose_vector_c[1] = y_angle * 2.0  # temp weight
             pose_vector_c[2] = (z_angle + 1.5) * 2  # temp weight
 
-
         model_input_arr = mouth_eye_vector_c
         model_input_arr.extend(pose_vector_c)
 
         model_process.input_queue.put_nowait(model_input_arr)
 
-        has_model_output=0
+        has_model_output = 0
         try:
             new_model_output = model_output
             while not model_process.output_queue.empty():
-                has_model_output+=1
+                has_model_output += 1
                 new_model_output = model_process.output_queue.get_nowait()
             model_output = new_model_output
         except queue.Empty:
@@ -434,7 +491,7 @@ def main():
         # if not should_output:
         #     continue
 
-        postprocessed_image=model_output
+        postprocessed_image = model_output
 
         if args.perf:
             print('===')
@@ -483,9 +540,10 @@ def main():
                 print("anime4k", (time.perf_counter() - tic) * 1000)
                 tic = time.perf_counter()
         if args.alpha_split:
-            alpha_image=cv2.merge([postprocessed_image[:, :, 3],postprocessed_image[:, :, 3],postprocessed_image[:, :, 3]])
-            alpha_image=cv2.cvtColor(alpha_image, cv2.COLOR_RGB2RGBA)
-            postprocessed_image=cv2.hconcat([postprocessed_image,alpha_image])
+            alpha_image = cv2.merge(
+                [postprocessed_image[:, :, 3], postprocessed_image[:, :, 3], postprocessed_image[:, :, 3]])
+            alpha_image = cv2.cvtColor(alpha_image, cv2.COLOR_RGB2RGBA)
+            postprocessed_image = cv2.hconcat([postprocessed_image, alpha_image])
 
         if args.debug:
             output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGRA)
