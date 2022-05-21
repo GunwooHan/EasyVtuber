@@ -189,9 +189,10 @@ class ModelClientProcess(Process):
                 simplify_arr[ifm_converter.mouth_lowered_corner_right_index] = 5
                 simplify_arr[ifm_converter.mouth_raised_corner_left_index] = 5
                 simplify_arr[ifm_converter.mouth_raised_corner_right_index] = 5
+
             if args.simplify >= 2:
-                simplify_arr[ifm_converter.head_x_index]=100
-                simplify_arr[ifm_converter.head_y_index]=100
+                simplify_arr[ifm_converter.head_x_index] = 100
+                simplify_arr[ifm_converter.head_y_index] = 100
                 simplify_arr[ifm_converter.eye_surprised_left_index] = 10
                 simplify_arr[ifm_converter.eye_surprised_right_index] = 10
                 model_input[ifm_converter.eye_wink_left_index - 12] += model_input[
@@ -224,10 +225,45 @@ class ModelClientProcess(Process):
             if args.simplify >= 3:
                 simplify_arr[ifm_converter.iris_rotation_x_index] = 20
                 simplify_arr[ifm_converter.iris_rotation_y_index] = 20
-                simplify_arr[ifm_converter.eye_wink_left_index] = 25
-                simplify_arr[ifm_converter.eye_wink_right_index] = 25
-                simplify_arr[ifm_converter.eye_happy_wink_left_index] = 25
-                simplify_arr[ifm_converter.eye_happy_wink_right_index] = 25
+                simplify_arr[ifm_converter.eye_wink_left_index] = 32
+                simplify_arr[ifm_converter.eye_wink_right_index] = 32
+                simplify_arr[ifm_converter.eye_happy_wink_left_index] = 32
+                simplify_arr[ifm_converter.eye_happy_wink_right_index] = 32
+            if args.simplify >= 4:
+                simplify_arr[ifm_converter.head_x_index] = 50
+                simplify_arr[ifm_converter.head_y_index] = 50
+                simplify_arr[ifm_converter.neck_z_index] = 100
+                model_input[ifm_converter.eye_raised_lower_eyelid_left_index - 12] = 0
+                model_input[ifm_converter.eye_raised_lower_eyelid_right_index - 12] = 0
+                simplify_arr[ifm_converter.iris_rotation_x_index] = 10
+                simplify_arr[ifm_converter.iris_rotation_y_index] = 10
+                simplify_arr[ifm_converter.eye_wink_left_index] = 24
+                simplify_arr[ifm_converter.eye_wink_right_index] = 24
+                simplify_arr[ifm_converter.eye_happy_wink_left_index] = 24
+                simplify_arr[ifm_converter.eye_happy_wink_right_index] = 24
+                simplify_arr[ifm_converter.eye_surprised_left_index] = 8
+                simplify_arr[ifm_converter.eye_surprised_right_index] = 8
+                model_input[ifm_converter.eye_wink_left_index - 12] += model_input[
+                    ifm_converter.eye_wink_right_index - 12]
+                model_input[ifm_converter.eye_wink_right_index - 12] = model_input[
+                                                                           ifm_converter.eye_wink_left_index - 12] / 2
+                model_input[ifm_converter.eye_wink_left_index - 12] = model_input[
+                                                                          ifm_converter.eye_wink_left_index - 12] / 2
+
+                model_input[ifm_converter.eye_surprised_left_index - 12] += model_input[
+                    ifm_converter.eye_surprised_right_index - 12]
+                model_input[ifm_converter.eye_surprised_right_index - 12] = model_input[
+                                                                                ifm_converter.eye_surprised_left_index - 12] / 2
+                model_input[ifm_converter.eye_surprised_left_index - 12] = model_input[
+                                                                               ifm_converter.eye_surprised_left_index - 12] / 2
+
+                model_input[ifm_converter.eye_happy_wink_left_index - 12] += model_input[
+                    ifm_converter.eye_happy_wink_right_index - 12]
+                model_input[ifm_converter.eye_happy_wink_right_index - 12] = model_input[
+                                                                                 ifm_converter.eye_happy_wink_left_index - 12] / 2
+                model_input[ifm_converter.eye_happy_wink_left_index - 12] = model_input[
+                                                                                ifm_converter.eye_happy_wink_left_index - 12] / 2
+
             for i in range(12, len(simplify_arr)):
                 if simplify_arr[i] > 0:
                     model_input[i - 12] = round(model_input[i - 12] * simplify_arr[i]) / simplify_arr[i]
