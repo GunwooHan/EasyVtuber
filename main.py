@@ -284,7 +284,7 @@ class ModelClientProcess(Process):
                 self.output_queue.put_nowait(cached)
                 model_cache.move_to_end(input_hash)
                 hit += 1
-                if (args.perf) or hit % 10 == 0:
+                if (args.perf) and hit % 20 == 0:
                     print('cached', str(hit / tot * 100) + '%')
             else:
                 if args.perf:
