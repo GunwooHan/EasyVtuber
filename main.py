@@ -54,6 +54,8 @@ def create_default_blender_data():
     return data
 
 
+ifm_converter = tha2.poser.modes.mode_20_wx.IFacialMocapPoseConverter20()
+
 class IFMClientProcess(Process):
     def __init__(self):
         super().__init__()
@@ -170,6 +172,8 @@ class ModelClientProcess(Process):
                 continue
             if input is None: continue
             input=[round(x*100)/100 for x in input]
+            input[ifm_converter.iris_rotation_y_index - 12]=round(input[ifm_converter.iris_rotation_y_index - 12]*100)/100
+            input[ifm_converter.iris_rotation_x_index - 12]=round(input[ifm_converter.iris_rotation_x_index - 12]*100)/100
             input_hash=hash(tuple(input))
             cached=model_cache.get(input_hash)
             tot+=1
@@ -177,7 +181,7 @@ class ModelClientProcess(Process):
                 self.output_queue.put_nowait(cached)
                 model_cache.move_to_end(input_hash)
                 hit+=1
-                if args.perf:
+                if (args.perf)or hit%100==0:
                     print('cached',str(hit/tot*100)+'%')
             else:
                 if args.perf:
@@ -221,8 +225,6 @@ def main():
         extra_image = np.array(img.crop((0, 256, img.size[0], img.size[1])))
 
     print("Character Image Loaded:", args.character)
-
-    ifm_converter = None
     cap = None
 
     if not args.debug_input:
@@ -231,7 +233,6 @@ def main():
             client_process = IFMClientProcess()
             client_process.daemon = True
             client_process.start()
-            ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
             print("IFM Service Running:", args.ifm)
 
         else:
