@@ -620,8 +620,10 @@ def main():
             # resized_frame = cv2.resize(output_frame, (np.min(debug_image.shape[:2]), np.min(debug_image.shape[:2])))
             # output_frame = np.concatenate([debug_image, resized_frame], axis=1)
             cv2.putText(output_frame, str('OUT_FPS:%.1f' % output_fps_number), (0, 16), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
-            cv2.putText(output_frame, str('INP_FPS:%.1f' % client_process.ifm_fps_number.value), (0, 32), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
-            cv2.putText(output_frame, str('GPU_FPS:%.1f' % model_process.model_fps_number.value), (0, 48), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            cv2.putText(output_frame, str('GPU_FPS:%.1f' % model_process.model_fps_number.value), (0, 32),
+                        cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            if args.ifm is not None:
+                cv2.putText(output_frame, str('IFM_FPS:%.1f' % client_process.ifm_fps_number.value), (0, 48), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             if args.max_cache_len>0:
                 cv2.putText(output_frame, str('CACHED:%.1f%%' % (model_process.cache_hit_ratio.value*100)), (0, 64), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             cv2.imshow("frame", output_frame)
