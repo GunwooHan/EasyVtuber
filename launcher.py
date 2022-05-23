@@ -104,10 +104,10 @@ def launch():
         if args['output'] == 0:
             run_args.append('--output_webcam')
             run_args.append('unitycapture')
-        elif args['input'] == 1:
+        elif args['output'] == 1:
             run_args.append('--output_webcam')
             run_args.append('obs')
-        elif args['input'] == 2:
+        elif args['output'] == 2:
             run_args.append('--debug')
         if args['is_anime4k']:
             run_args.append('--anime4k')
