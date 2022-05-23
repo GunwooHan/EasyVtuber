@@ -79,7 +79,7 @@ class IFMClientProcess(Process):
         self.should_terminate = Value('b', False)
         self.address = args.ifm.split(':')[0]
         self.port = int(args.ifm.split(':')[1])
-        self.ifm_fps_number=Value('f',0.0)
+        self.ifm_fps_number = Value('f', 0.0)
         self.perf_time = 0
 
     def run(self):
@@ -96,8 +96,8 @@ class IFMClientProcess(Process):
         self.socket.setblocking(False)
         self.socket.bind(("", self.port))
         self.socket.settimeout(0.1)
-        ifm_fps=FPS()
-        pre_socket_string=''
+        ifm_fps = FPS()
+        pre_socket_string = ''
         while True:
             if self.should_terminate.value:
                 break
@@ -110,9 +110,9 @@ class IFMClientProcess(Process):
                 else:
                     raise e
             socket_string = socket_bytes.decode("utf-8")
-            if args.debug and pre_socket_string!=socket_string:
-                self.ifm_fps_number.value=ifm_fps()
-                pre_socket_string=socket_string
+            if args.debug and pre_socket_string != socket_string:
+                self.ifm_fps_number.value = ifm_fps()
+                pre_socket_string = socket_string
             # print(socket_string)
             # blender_data = json.loads(socket_string)
             data = self.convert_from_blender_data(socket_string)
@@ -162,8 +162,9 @@ class ModelClientProcess(Process):
         self.input_image = input_image
         self.output_queue = Queue()
         self.input_queue = Queue()
-        self.model_fps_number=Value('f',0.0)
-        self.cache_hit_ratio=Value('f',0.0)
+        self.model_fps_number = Value('f', 0.0)
+        self.gpu_fps_number = Value('f', 0.0)
+        self.cache_hit_ratio = Value('f', 0.0)
 
     def run(self):
         model = None
@@ -184,6 +185,7 @@ class ModelClientProcess(Process):
         tot = 0
         hit = 0
         model_fps = FPS()
+        gpu_fps = FPS()
         while True:
             model_input = None
             try:
@@ -304,7 +306,7 @@ class ModelClientProcess(Process):
                 self.output_queue.put_nowait(cached)
                 model_cache.move_to_end(input_hash)
                 hit += 1
-                self.cache_hit_ratio.value=hit / tot
+                self.cache_hit_ratio.value = hit / tot
             else:
                 if args.perf:
                     tic = time.perf_counter()
@@ -330,12 +332,14 @@ class ModelClientProcess(Process):
                     tic = time.perf_counter()
 
                 self.output_queue.put_nowait(postprocessed_image)
+                if args.debug:
+                    self.gpu_fps_number.value = gpu_fps()
                 if args.max_cache_len > 0:
                     model_cache[input_hash] = postprocessed_image
                     if len(model_cache) > args.max_cache_len:
                         model_cache.popitem(0)
             if args.debug:
-                self.model_fps_number.value=model_fps()
+                self.model_fps_number.value = model_fps()
 
 
 @torch.no_grad()
@@ -351,7 +355,7 @@ def main():
     print("Character Image Loaded:", args.character)
     cap = None
 
-    output_fps=FPS()
+    output_fps = FPS()
 
     if not args.debug_input:
 
@@ -591,7 +595,7 @@ def main():
             print("extendmovement", (time.perf_counter() - tic) * 1000)
             tic = time.perf_counter()
 
-        output_fps_number=output_fps()
+        output_fps_number = output_fps()
 
         if args.anime4k:
             alpha_channel = postprocessed_image[:, :, 3]
@@ -619,13 +623,24 @@ def main():
             output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGRA)
             # resized_frame = cv2.resize(output_frame, (np.min(debug_image.shape[:2]), np.min(debug_image.shape[:2])))
             # output_frame = np.concatenate([debug_image, resized_frame], axis=1)
-            cv2.putText(output_frame, str('OUT_FPS:%.1f' % output_fps_number), (0, 16), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
-            cv2.putText(output_frame, str('GPU_FPS:%.1f' % model_process.model_fps_number.value), (0, 32),
-                        cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            cv2.putText(output_frame, str('OUT_FPS:%.1f' % output_fps_number), (0, 16), cv2.FONT_HERSHEY_PLAIN, 1,
+                        (0, 255, 0), 1)
+            if args.max_cache_len > 0:
+                cv2.putText(output_frame, str(
+                    'GPU_FPS:%.1f / %.1f' % (model_process.model_fps_number.value, model_process.gpu_fps_number.value)),
+                            (0, 32),
+                            cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            else:
+                cv2.putText(output_frame, str(
+                    'GPU_FPS:%.1f' % (model_process.model_fps_number.value)),
+                            (0, 32),
+                            cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             if args.ifm is not None:
-                cv2.putText(output_frame, str('IFM_FPS:%.1f' % client_process.ifm_fps_number.value), (0, 48), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
-            if args.max_cache_len>0:
-                cv2.putText(output_frame, str('CACHED:%.1f%%' % (model_process.cache_hit_ratio.value*100)), (0, 64), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+                cv2.putText(output_frame, str('IFM_FPS:%.1f' % client_process.ifm_fps_number.value), (0, 48),
+                            cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            if args.max_cache_len > 0:
+                cv2.putText(output_frame, str('CACHED:%.1f%%' % (model_process.cache_hit_ratio.value * 100)), (0, 64),
+                            cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             cv2.imshow("frame", output_frame)
             # cv2.imshow("camera", debug_image)
             cv2.waitKey(1)
