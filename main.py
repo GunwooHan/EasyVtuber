@@ -27,6 +27,21 @@ from tha2.mocap.ifacialmocap_constants import *
 
 from args import args
 
+import collections
+
+
+class FPS:
+    def __init__(self, avarageof=50):
+        self.frametimestamps = collections.deque(maxlen=avarageof)
+
+    def __call__(self):
+        self.frametimestamps.append(time.time())
+        if len(self.frametimestamps) > 1:
+            return len(self.frametimestamps) / (self.frametimestamps[-1] - self.frametimestamps[0])
+        else:
+            return 0.0
+
+
 device = torch.device('cuda') if torch.cuda.is_available() and not args.skip_model else torch.device('cpu')
 
 
@@ -64,6 +79,7 @@ class IFMClientProcess(Process):
         self.should_terminate = Value('b', False)
         self.address = args.ifm.split(':')[0]
         self.port = int(args.ifm.split(':')[1])
+        self.ifm_fps_number=Value('f',0.0)
         self.perf_time = 0
 
     def run(self):
@@ -80,6 +96,8 @@ class IFMClientProcess(Process):
         self.socket.setblocking(False)
         self.socket.bind(("", self.port))
         self.socket.settimeout(0.1)
+        ifm_fps=FPS()
+        pre_socket_string=''
         while True:
             if self.should_terminate.value:
                 break
@@ -92,13 +110,13 @@ class IFMClientProcess(Process):
                 else:
                     raise e
             socket_string = socket_bytes.decode("utf-8")
+            if args.debug and pre_socket_string!=socket_string:
+                self.ifm_fps_number.value=ifm_fps()
+                pre_socket_string=socket_string
             # print(socket_string)
             # blender_data = json.loads(socket_string)
             data = self.convert_from_blender_data(socket_string)
-            # cur_time = time.perf_counter()
-            # fps = 1 / (cur_time - self.perf_time)
-            # self.perf_time = cur_time
-            # print(fps)
+
             try:
                 self.queue.put_nowait(data)
             except queue.Full:
@@ -144,6 +162,8 @@ class ModelClientProcess(Process):
         self.input_image = input_image
         self.output_queue = Queue()
         self.input_queue = Queue()
+        self.model_fps_number=Value('f',0.0)
+        self.cache_hit_ratio=Value('f',0.0)
 
     def run(self):
         model = None
@@ -163,7 +183,7 @@ class ModelClientProcess(Process):
         model_cache = OrderedDict()
         tot = 0
         hit = 0
-
+        model_fps = FPS()
         while True:
             model_input = None
             try:
@@ -264,16 +284,16 @@ class ModelClientProcess(Process):
                 model_input[ifm_converter.eye_happy_wink_left_index - 12] = model_input[
                                                                                 ifm_converter.eye_happy_wink_left_index - 12] / 2
                 model_input[ifm_converter.mouth_aaa_index - 12] = min(
-                    model_input[ifm_converter.mouth_aaa_index - 12]+
-                    model_input[ifm_converter.mouth_ooo_index - 12]/2+
-                    model_input[ifm_converter.mouth_iii_index - 12]/2+
-                    model_input[ifm_converter.mouth_uuu_index - 12]/2,1
+                    model_input[ifm_converter.mouth_aaa_index - 12] +
+                    model_input[ifm_converter.mouth_ooo_index - 12] / 2 +
+                    model_input[ifm_converter.mouth_iii_index - 12] / 2 +
+                    model_input[ifm_converter.mouth_uuu_index - 12] / 2, 1
                 )
-                model_input[ifm_converter.mouth_ooo_index - 12]=0
-                model_input[ifm_converter.mouth_iii_index - 12]=0
-                model_input[ifm_converter.mouth_uuu_index - 12]=0
-            for i in range(4,args.simplify):
-                simplify_arr=[max(math.ceil(x*0.8),5)for x in simplify_arr]
+                model_input[ifm_converter.mouth_ooo_index - 12] = 0
+                model_input[ifm_converter.mouth_iii_index - 12] = 0
+                model_input[ifm_converter.mouth_uuu_index - 12] = 0
+            for i in range(4, args.simplify):
+                simplify_arr = [max(math.ceil(x * 0.8), 5) for x in simplify_arr]
             for i in range(12, len(simplify_arr)):
                 if simplify_arr[i] > 0:
                     model_input[i - 12] = round(model_input[i - 12] * simplify_arr[i]) / simplify_arr[i]
@@ -284,8 +304,7 @@ class ModelClientProcess(Process):
                 self.output_queue.put_nowait(cached)
                 model_cache.move_to_end(input_hash)
                 hit += 1
-                if (args.perf) and hit % 20 == 0:
-                    print('cached', str(hit / tot * 100) + '%')
+                self.cache_hit_ratio.value=hit / tot
             else:
                 if args.perf:
                     tic = time.perf_counter()
@@ -315,6 +334,8 @@ class ModelClientProcess(Process):
                     model_cache[input_hash] = postprocessed_image
                     if len(model_cache) > args.max_cache_len:
                         model_cache.popitem(0)
+            if args.debug:
+                self.model_fps_number.value=model_fps()
 
 
 @torch.no_grad()
@@ -329,6 +350,8 @@ def main():
 
     print("Character Image Loaded:", args.character)
     cap = None
+
+    output_fps=FPS()
 
     if not args.debug_input:
 
@@ -391,7 +414,6 @@ def main():
 
     pose_queue = []
     blender_data = create_default_blender_data()
-    tic1 = 0
 
     model_output = None
     model_process = ModelClientProcess(input_image)
@@ -569,6 +591,8 @@ def main():
             print("extendmovement", (time.perf_counter() - tic) * 1000)
             tic = time.perf_counter()
 
+        output_fps_number=output_fps()
+
         if args.anime4k:
             alpha_channel = postprocessed_image[:, :, 3]
             alpha_channel = cv2.resize(alpha_channel, None, fx=2, fy=2)
@@ -595,11 +619,11 @@ def main():
             output_frame = cv2.cvtColor(postprocessed_image, cv2.COLOR_RGBA2BGRA)
             # resized_frame = cv2.resize(output_frame, (np.min(debug_image.shape[:2]), np.min(debug_image.shape[:2])))
             # output_frame = np.concatenate([debug_image, resized_frame], axis=1)
-            toc = time.perf_counter()
-            fps = 1 / (toc - tic1)
-            tic1 = toc
-            cv2.putText(output_frame, str('%.1f' % fps), (0, 16), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
-            # cv2.putText(output_frame, str('%.1f' % (missed_count/changed_count*100)), (0, 48), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            cv2.putText(output_frame, str('OUT_FPS:%.1f' % output_fps_number), (0, 16), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            cv2.putText(output_frame, str('INP_FPS:%.1f' % client_process.ifm_fps_number.value), (0, 32), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            cv2.putText(output_frame, str('GPU_FPS:%.1f' % model_process.model_fps_number.value), (0, 48), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            if args.max_cache_len>0:
+                cv2.putText(output_frame, str('CACHED:%.1f%%' % (model_process.cache_hit_ratio.value*100)), (0, 64), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             cv2.imshow("frame", output_frame)
             # cv2.imshow("camera", debug_image)
             cv2.waitKey(1)
