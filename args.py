@@ -24,7 +24,8 @@ parser.add_argument('--skip_model', action='store_true')
 parser.add_argument('--ifm', type=str)
 parser.add_argument('--anime4k', action='store_true')
 parser.add_argument('--alpha_split', action='store_true')
-parser.add_argument('--cache', type=str, default='100mb')
+parser.add_argument('--cache', type=str, default='256mb')
+parser.add_argument('--gpu_cache', type=str, default='512mb')
 parser.add_argument('--simplify', type=int, default=1)
 args = parser.parse_args()
 args.output_w = int(args.output_size.split('x')[0])
@@ -33,4 +34,8 @@ if args.cache is not None:
     args.max_cache_len=int(convert_to_byte(args.cache)/262144)
 else:
     args.max_cache_len=0
+if args.gpu_cache is not None:
+    args.max_gpu_cache_len=int(convert_to_byte(args.gpu_cache)/589824)
+else:
+    args.max_gpu_cache_len=0
 if args.output_webcam is None and args.output_dir is None: args.debug = True

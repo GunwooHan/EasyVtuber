@@ -165,6 +165,7 @@ class ModelClientProcess(Process):
         self.model_fps_number = Value('f', 0.0)
         self.gpu_fps_number = Value('f', 0.0)
         self.cache_hit_ratio = Value('f', 0.0)
+        self.gpu_cache_hit_ratio= Value('f', 0.0)
 
     def run(self):
         model = None
@@ -302,22 +303,23 @@ class ModelClientProcess(Process):
             input_hash = hash(tuple(model_input))
             cached = model_cache.get(input_hash)
             tot += 1
+            mouth_eye_vector_c=[0.0]*27
             if not cached is None:
                 self.output_queue.put_nowait(cached)
                 model_cache.move_to_end(input_hash)
                 hit += 1
-                self.cache_hit_ratio.value = hit / tot
             else:
                 if args.perf:
                     tic = time.perf_counter()
                 for i in range(27):
                     mouth_eye_vector[0, i] = model_input[i]
+                    mouth_eye_vector_c[i]=model_input[i]
                 for i in range(3):
                     pose_vector[0, i] = model_input[i + 27]
                 if model is None:
                     output_image = input_image
                 else:
-                    output_image = model(input_image, mouth_eye_vector, pose_vector)
+                    output_image = model(input_image, mouth_eye_vector, pose_vector, mouth_eye_vector_c,self.gpu_cache_hit_ratio)
                 if args.perf:
                     torch.cuda.synchronize()
                     print("model", (time.perf_counter() - tic) * 1000)
@@ -337,9 +339,10 @@ class ModelClientProcess(Process):
                 if args.max_cache_len > 0:
                     model_cache[input_hash] = postprocessed_image
                     if len(model_cache) > args.max_cache_len:
-                        model_cache.popitem(0)
+                        model_cache.popitem(last=False)
             if args.debug:
                 self.model_fps_number.value = model_fps()
+                self.cache_hit_ratio.value = hit / tot
 
 
 @torch.no_grad()
@@ -639,7 +642,10 @@ def main():
                 cv2.putText(output_frame, str('IFM_FPS:%.1f' % client_process.ifm_fps_number.value), (0, 48),
                             cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             if args.max_cache_len > 0:
-                cv2.putText(output_frame, str('CACHED:%.1f%%' % (model_process.cache_hit_ratio.value * 100)), (0, 64),
+                cv2.putText(output_frame, str('MEMCACHED:%.1f%%' % (model_process.cache_hit_ratio.value * 100)), (0, 64),
+                            cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
+            if args.max_gpu_cache_len > 0:
+                cv2.putText(output_frame, str('GPUCACHED:%.1f%%' % (model_process.gpu_cache_hit_ratio.value * 100)), (0, 80),
                             cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             cv2.imshow("frame", output_frame)
             # cv2.imshow("camera", debug_image)
