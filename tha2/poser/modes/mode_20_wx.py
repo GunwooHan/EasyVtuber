@@ -86,7 +86,7 @@ class IFacialMocapPoseConverter20(IFacialMocapPoseConverter):
         self.eyebrow_serious_left_index = pose_parameters.get_parameter_index("eyebrow_serious_left")
         self.eyebrow_serious_right_index = pose_parameters.get_parameter_index("eyebrow_serious_right")
 
-        self.eye_surprised_left_index = pose_parameters.get_parameter_index("eye_surprised_left")
+        self.eye_surprised_left_index = pose_parameters.get_parameter_index("eye_surprised_left")  # 0
         self.eye_surprised_right_index = pose_parameters.get_parameter_index("eye_surprised_right")
         self.eye_wink_left_index = pose_parameters.get_parameter_index("eye_wink_left")
         self.eye_wink_right_index = pose_parameters.get_parameter_index("eye_wink_right")
@@ -95,13 +95,13 @@ class IFacialMocapPoseConverter20(IFacialMocapPoseConverter):
         self.eye_relaxed_left_index = pose_parameters.get_parameter_index("eye_relaxed_left")
         self.eye_relaxed_right_index = pose_parameters.get_parameter_index("eye_relaxed_right")
         self.eye_raised_lower_eyelid_left_index = pose_parameters.get_parameter_index("eye_raised_lower_eyelid_left")
-        self.eye_raised_lower_eyelid_right_index = pose_parameters.get_parameter_index("eye_raised_lower_eyelid_right")
+        self.eye_raised_lower_eyelid_right_index = pose_parameters.get_parameter_index("eye_raised_lower_eyelid_right")  # 9
 
-        self.iris_small_left_index = pose_parameters.get_parameter_index("iris_small_left")
+        self.iris_small_left_index = pose_parameters.get_parameter_index("iris_small_left")#10
         self.iris_small_right_index = pose_parameters.get_parameter_index("iris_small_right")
 
         self.iris_rotation_x_index = pose_parameters.get_parameter_index("iris_rotation_x")
-        self.iris_rotation_y_index = pose_parameters.get_parameter_index("iris_rotation_y")
+        self.iris_rotation_y_index = pose_parameters.get_parameter_index("iris_rotation_y")#13
 
         self.head_x_index = pose_parameters.get_parameter_index("head_x")
         self.head_y_index = pose_parameters.get_parameter_index("head_y")
@@ -270,9 +270,11 @@ class IFacialMocapPoseConverter20(IFacialMocapPoseConverter):
                 pose[self.mouth_iii_index] = restricted_decomp[1]
                 mouth_funnel_denom = self.args.mouth_funnel_max_value - self.args.mouth_funnel_min_value
                 ooo_alpha = clamp((mouth_funnel - self.args.mouth_funnel_min_value) / mouth_funnel_denom, 0.0, 1.0)
+                # ooo_alpha = 1
                 uo_value = clamp(restricted_decomp[2] + restricted_decomp[3], 0.0, 1.0)
                 pose[self.mouth_uuu_index] = uo_value * (1.0 - ooo_alpha)
                 pose[self.mouth_ooo_index] = uo_value * ooo_alpha
+                # print(pose[self.mouth_aaa_index:self.mouth_ooo_index+1])
                 # pose[28] = restricted_decomp[2]
                 # pose[30] = restricted_decomp[3]
 

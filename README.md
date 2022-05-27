@@ -9,6 +9,8 @@ Fork自 https://github.com/GunwooHan/EasyVtuber
 并且省略了ifacialmocap pc端，通过UDP直连的方式使ios面捕刷新率达到30fps，解决了面捕刷新率的瓶颈  
 最后，将EasyVtuber中使用的OBS虚拟摄像头方案切换为Unity Capture，解锁RGBA输出能力，无需绿背即可直接使用
 
+[视频介绍和安装说明](https://www.bilibili.com/video/BV1uu411r7DR)  
+
 ## Requirements  
 
 ### 硬件  
@@ -86,6 +88,20 @@ https://github.com/pkhungurn/talking-head-anime-2-demo#download-the-model
 ```
 
 ### 输入输出设备  
+
+#### OBS Virtual Camera
+
+目前更推荐这个方案，UnityCapture存在未查明的性能瓶颈  
+如果你选择自己进行抠像你可以直接输出到obs，如果你需要RGBA支持则需要额外使用一个Shader  
+下载并安装StreamFX https://github.com/Xaymar/obs-StreamFX  
+下载Shader（感谢树根的协助） https://github.com/shugen002/shader/blob/master/merge%20alpha2.hlsl  
+之后，使用`--alpha_split`参数运行
+![alpha split](assets/alphasplit.png)  
+你会看到这样的输出画面，透明通道单独使用灰度方式发送了  
+之后对OBS中的视频采集设备添加滤镜-着色器-选择你下载的`merge alpha2.hlsl`-关闭   
+这样透明通道就应用回左边的图像了  
+你可能需要手动调整一下裁剪把右侧的无用画面切掉  
+(看不到着色器滤镜的话就是StreamFX没装好或者OBS不是最新版)
 
 #### UnityCapture  
 
