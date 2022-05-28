@@ -23,6 +23,8 @@ try:
     args = json.load(f)
     default_arg.update(args)
     f.close()
+except:
+    pass
 finally:
     args = default_arg
 
