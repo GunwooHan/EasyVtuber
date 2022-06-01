@@ -17,6 +17,7 @@ import queue
 import socket
 import time
 import math
+from pynput.mouse import Button, Controller
 import re
 from collections import OrderedDict
 from multiprocessing import Value, Process, Queue
@@ -152,12 +153,49 @@ class IFMClientProcess(Process):
 
         return data
 
+
 class MouseClientProcess(Process):
     def __init__(self):
-        self.output_queue = Queue()
-        self.prev=None
+        super().__init__()
+        self.queue = Queue()
+
     def run(self):
-        pass
+        mouse = Controller()
+        posLimit = [int(x) for x in args.mouse_input.split(',')]
+        prev = {
+            'eye_l_h_temp': 0,
+            'eye_r_h_temp': 0,
+            'mouth_ratio': 0,
+            'eye_y_ratio': 0,
+            'eye_x_ratio': 0,
+            'x_angle': 0,
+            'y_angle': 0,
+            'z_angle': 0,
+        }
+        while True:
+            pos=mouse.position
+            print(pos)
+            eye_limit=[0.8,0.5]
+            head_eye_reduce=0.6
+            head_slowness=0.2
+            mouse_data = {
+                'eye_l_h_temp': 0,
+                'eye_r_h_temp': 0,
+                'mouth_ratio': 0,
+                'eye_y_ratio': np.interp(pos[1],[posLimit[1],posLimit[3]],[1,-1])*eye_limit[1],
+                'eye_x_ratio': np.interp(pos[0],[posLimit[0],posLimit[2]],[1,-1])*eye_limit[0],
+                'x_angle': np.interp(pos[1],[posLimit[1],posLimit[3]],[1,-1]),
+                'y_angle': np.interp(pos[0],[posLimit[0],posLimit[2]],[1,-1]),
+                'z_angle': 0,
+            }
+            mouse_data['x_angle']=np.interp(head_slowness,[0,1],[prev['x_angle'],mouse_data['x_angle']])
+            mouse_data['y_angle']=np.interp(head_slowness,[0,1],[prev['y_angle'],mouse_data['y_angle']])
+            mouse_data['eye_y_ratio']-=mouse_data['x_angle']*eye_limit[1]*head_eye_reduce
+            mouse_data['eye_x_ratio']-=mouse_data['y_angle']*eye_limit[0]*head_eye_reduce
+            prev=mouse_data
+            self.queue.put_nowait(mouse_data)
+            time.sleep(1/60)
+
 
 
 class ModelClientProcess(Process):
@@ -172,7 +210,7 @@ class ModelClientProcess(Process):
         self.model_fps_number = Value('f', 0.0)
         self.gpu_fps_number = Value('f', 0.0)
         self.cache_hit_ratio = Value('f', 0.0)
-        self.gpu_cache_hit_ratio= Value('f', 0.0)
+        self.gpu_cache_hit_ratio = Value('f', 0.0)
 
     def run(self):
         model = None
@@ -192,6 +230,7 @@ class ModelClientProcess(Process):
         model_cache = OrderedDict()
         tot = 0
         hit = 0
+        hit_in_a_row = 0
         model_fps = FPS()
         gpu_fps = FPS()
         while True:
@@ -219,7 +258,6 @@ class ModelClientProcess(Process):
                 simplify_arr[ifm_converter.mouth_lowered_corner_right_index] = 5
                 simplify_arr[ifm_converter.mouth_raised_corner_left_index] = 5
                 simplify_arr[ifm_converter.mouth_raised_corner_right_index] = 5
-
             if args.simplify >= 2:
                 simplify_arr[ifm_converter.head_x_index] = 100
                 simplify_arr[ifm_converter.head_y_index] = 100
@@ -310,23 +348,26 @@ class ModelClientProcess(Process):
             input_hash = hash(tuple(model_input))
             cached = model_cache.get(input_hash)
             tot += 1
-            mouth_eye_vector_c=[0.0]*27
-            if not cached is None:
+            mouth_eye_vector_c = [0.0] * 27
+            if cached is not None and hit_in_a_row<self.model_fps_number.value:
                 self.output_queue.put_nowait(cached)
                 model_cache.move_to_end(input_hash)
                 hit += 1
+                hit_in_a_row += 1
             else:
+                hit_in_a_row = 0
                 if args.perf:
                     tic = time.perf_counter()
                 for i in range(27):
                     mouth_eye_vector[0, i] = model_input[i]
-                    mouth_eye_vector_c[i]=model_input[i]
+                    mouth_eye_vector_c[i] = model_input[i]
                 for i in range(3):
                     pose_vector[0, i] = model_input[i + 27]
                 if model is None:
                     output_image = input_image
                 else:
-                    output_image = model(input_image, mouth_eye_vector, pose_vector, mouth_eye_vector_c,self.gpu_cache_hit_ratio)
+                    output_image = model(input_image, mouth_eye_vector, pose_vector, mouth_eye_vector_c,
+                                         self.gpu_cache_hit_ratio)
                 if args.perf:
                     torch.cuda.synchronize()
                     print("model", (time.perf_counter() - tic) * 1000)
@@ -374,6 +415,12 @@ def main():
             client_process.daemon = True
             client_process.start()
             print("IFM Service Running:", args.ifm)
+
+        if args.mouse_input is not None:
+            client_process = MouseClientProcess()
+            client_process.daemon = True
+            client_process.start()
+            print("Mouse Input Running")
 
         else:
 
@@ -428,6 +475,16 @@ def main():
 
     pose_queue = []
     blender_data = create_default_blender_data()
+    mouse_data={
+        'eye_l_h_temp':0,
+        'eye_r_h_temp':0,
+        'mouth_ratio':0,
+        'eye_y_ratio':0,
+        'eye_x_ratio':0,
+        'x_angle':0,
+        'y_angle':0,
+        'z_angle':0,
+    }
 
     model_output = None
     model_process = ModelClientProcess(input_image)
@@ -501,6 +558,39 @@ def main():
 
             position_vector = blender_data[HEAD_BONE_QUAT]
 
+        elif args.mouse_input is not None:
+
+            try:
+                new_blender_data = mouse_data
+                while not client_process.queue.empty():
+                    new_blender_data = client_process.queue.get_nowait()
+                mouse_data = new_blender_data
+            except queue.Empty:
+                pass
+
+            eye_l_h_temp = mouse_data['eye_l_h_temp']
+            eye_r_h_temp = mouse_data['eye_r_h_temp']
+            mouth_ratio = mouse_data['mouth_ratio']
+            eye_y_ratio = mouse_data['eye_y_ratio']
+            eye_x_ratio = mouse_data['eye_x_ratio']
+            x_angle = mouse_data['x_angle']
+            y_angle = mouse_data['y_angle']
+            z_angle = mouse_data['z_angle']
+
+            mouth_eye_vector_c = [0.0] * 27
+            pose_vector_c = [0.0] * 3
+
+            mouth_eye_vector_c[2] = eye_l_h_temp
+            mouth_eye_vector_c[3] = eye_r_h_temp
+
+            mouth_eye_vector_c[14] = mouth_ratio * 1.5
+
+            mouth_eye_vector_c[25] = eye_y_ratio
+            mouth_eye_vector_c[26] = eye_x_ratio
+
+            pose_vector_c[0] = x_angle
+            pose_vector_c[1] = y_angle
+            pose_vector_c[2] = z_angle
 
         else:
             ret, frame = cap.read()
@@ -649,10 +739,12 @@ def main():
                 cv2.putText(output_frame, str('IFM_FPS:%.1f' % client_process.ifm_fps_number.value), (0, 48),
                             cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             if args.max_cache_len > 0:
-                cv2.putText(output_frame, str('MEMCACHED:%.1f%%' % (model_process.cache_hit_ratio.value * 100)), (0, 64),
+                cv2.putText(output_frame, str('MEMCACHED:%.1f%%' % (model_process.cache_hit_ratio.value * 100)),
+                            (0, 64),
                             cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             if args.max_gpu_cache_len > 0:
-                cv2.putText(output_frame, str('GPUCACHED:%.1f%%' % (model_process.gpu_cache_hit_ratio.value * 100)), (0, 80),
+                cv2.putText(output_frame, str('GPUCACHED:%.1f%%' % (model_process.gpu_cache_hit_ratio.value * 100)),
+                            (0, 80),
                             cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 1)
             cv2.imshow("frame", output_frame)
             # cv2.imshow("camera", debug_image)
