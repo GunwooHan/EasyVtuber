@@ -53,6 +53,7 @@ input = tk.IntVar(value=args['input'])
 ttk.Label(launcher, text="Face Data Source").pack(fill='x', expand=True)
 ttk.Radiobutton(launcher, text='iFacialMocap', value=0, variable=input).pack(fill='x', expand=True)
 ttk.Radiobutton(launcher, text='Webcam', value=1, variable=input).pack(fill='x', expand=True)
+ttk.Radiobutton(launcher, text='Mouse Input', value=3, variable=input).pack(fill='x', expand=True)
 ttk.Radiobutton(launcher, text='Initial Debug Input', value=2, variable=input).pack(fill='x', expand=True)
 
 ttk.Label(launcher, text="iFacialMocap IP:Port").pack(fill='x', expand=True)
@@ -133,6 +134,9 @@ def launch():
             run_args.append('cam')
         elif args['input'] == 2:
             run_args.append('--debug_input')
+        elif args['input'] == 3:
+            run_args.append('--mouse_input')
+            run_args.append('0,0,'+str(root.winfo_screenwidth())+','+str(root.winfo_screenheight()))
 
         if args['output'] == 0:
             run_args.append('--output_webcam')
