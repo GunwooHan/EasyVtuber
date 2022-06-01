@@ -152,6 +152,13 @@ class IFMClientProcess(Process):
 
         return data
 
+class MouseClientProcess(Process):
+    def __init__(self):
+        self.output_queue = Queue()
+        self.prev=None
+    def run(self):
+        pass
+
 
 class ModelClientProcess(Process):
     def __init__(self, input_image):

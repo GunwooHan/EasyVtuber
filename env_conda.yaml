@@ -135,3 +135,4 @@ dependencies:
     - opencv-python==4.5.5.64
     - protobuf==3.20.1
     - pyvirtualcam==0.9.1
+    - pynput==1.7.6
