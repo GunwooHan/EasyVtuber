@@ -174,7 +174,7 @@ class MouseClientProcess(Process):
         }
         while True:
             pos=mouse.position
-            print(pos)
+            # print(pos)
             eye_limit=[0.8,0.5]
             head_eye_reduce=0.6
             head_slowness=0.2
