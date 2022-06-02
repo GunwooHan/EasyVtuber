@@ -398,6 +398,11 @@ def main():
     img = Image.open(f"character/{args.character}.png")
     wRatio = img.size[0] / 256
     img = img.resize((256, int(img.size[1] / wRatio)))
+    for i, px in enumerate(img.getdata()):
+        if px[3] <= 0:
+            y = i // 256
+            x = i % 256
+            img.putpixel((x, y), (0, 0, 0, 0))
     input_image = preprocessing_image(img.crop((0, 0, 256, 256))).unsqueeze(0)
     extra_image = None
     if img.size[1] > 256:
