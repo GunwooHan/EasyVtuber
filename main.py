@@ -192,6 +192,9 @@ class MouseClientProcess(Process):
             mouse_data['y_angle']=np.interp(head_slowness,[0,1],[prev['y_angle'],mouse_data['y_angle']])
             mouse_data['eye_y_ratio']-=mouse_data['x_angle']*eye_limit[1]*head_eye_reduce
             mouse_data['eye_x_ratio']-=mouse_data['y_angle']*eye_limit[0]*head_eye_reduce
+            if args.bongo:
+                mouse_data['y_angle']+=0.05
+                mouse_data['x_angle']+=0.05
             prev=mouse_data
             self.queue.put_nowait(mouse_data)
             time.sleep(1/60)
@@ -682,11 +685,13 @@ def main():
         rotate_angle = 0
         dx = 0
         dy = 0
-        if args.extend_movement is not None:
+        if args.extend_movement:
             k_scale = position_vector[2] * math.sqrt(args.extend_movement) + 1
             rotate_angle = -position_vector[0] * 40 * args.extend_movement
             dx = position_vector[0] * 400 * k_scale * args.extend_movement
             dy = -position_vector[1] * 600 * k_scale * args.extend_movement
+        if args.bongo:
+            rotate_angle-=5
         rm = cv2.getRotationMatrix2D((128, 128), rotate_angle, k_scale)
         rm[0, 2] += dx + args.output_w / 2 - 128
         rm[1, 2] += dy + args.output_h / 2 - 128

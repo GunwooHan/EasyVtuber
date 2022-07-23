@@ -14,6 +14,7 @@ default_arg={
         'is_extend_movement': False,
         'is_anime4k': False,
         'is_alpha_split': False,
+        'is_bongo': False,
         'cache_simplify': 1,
         'cache_size': 1,
     }
@@ -90,6 +91,9 @@ ttk.Checkbutton(launcher, text='Anime4K', variable=is_anime4k).pack(fill='x', ex
 is_alpha_split = tk.BooleanVar(value=args['is_alpha_split'])
 ttk.Checkbutton(launcher, text='Alpha Split', variable=is_alpha_split).pack(fill='x', expand=True)
 
+is_bongo = tk.BooleanVar(value=args['is_bongo'])
+ttk.Checkbutton(launcher, text='Bongocat Mode', variable=is_bongo).pack(fill='x', expand=True)
+
 output = tk.IntVar(value=args['output'])
 ttk.Label(launcher, text="Output").pack(fill='x', expand=True)
 ttk.Radiobutton(launcher, text='Unity Capture', value=0, variable=output).pack(fill='x', expand=True)
@@ -108,6 +112,7 @@ def launch():
         'is_extend_movement': is_extend_movement.get(),
         'is_anime4k': is_anime4k.get(),
         'is_alpha_split': is_alpha_split.get(),
+        'is_bongo': is_bongo.get(),
         'cache_simplify': cache_simplify.get(),
         'cache_size': cache_size.get(),
     }
@@ -153,6 +158,8 @@ def launch():
         if args['is_extend_movement']:
             run_args.append('--extend_movement')
             run_args.append('1')
+        if args['is_bongo']:
+            run_args.append('--bongo')
         if args['cache_simplify'] is not None:
             run_args.append('--simplify')
             run_args.append(str(args['cache_simplify']))
@@ -163,7 +170,7 @@ def launch():
             run_args.append(['0b','128mb','512mb','1gb','2gb','4gb'][args['cache_size']])
         run_args.append('--output_size')
         run_args.append('512x512')
-        print(run_args)
+        print('Launched: '+' '.join(run_args))
         p = subprocess.Popen(run_args)
         launch_btn.config(text='Stop')
 
