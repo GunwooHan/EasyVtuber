@@ -138,6 +138,9 @@ dmypy.json
 
 
 data/
+!data/images/lambda*
+!data/images/README.md
+!data/models/placeholder.txt
 *.iml
 .idea/
 *.pt
