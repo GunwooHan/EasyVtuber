@@ -6,7 +6,7 @@ import mediapipe as mp
 from PIL import Image
 
 import tha2.poser.modes.mode_20_wx
-from models import TalkingAnimeLight
+from models import TalkingAnimeLight, TalkingAnime3
 from pose import get_pose
 from utils import preprocessing_image, postprocessing_image
 
@@ -218,13 +218,13 @@ class ModelClientProcess(Process):
     def run(self):
         model = None
         if not args.skip_model:
-            model = TalkingAnimeLight().to(device)
+            model = TalkingAnime3().to(device)
             model = model.eval()
             model = model
             print("Pretrained Model Loaded")
 
         mouth_eye_vector = torch.empty(1, 27)
-        pose_vector = torch.empty(1, 3)
+        pose_vector = torch.empty(1, 6)
 
         input_image = self.input_image.to(device)
         mouth_eye_vector = mouth_eye_vector.to(device)
@@ -364,7 +364,7 @@ class ModelClientProcess(Process):
                 for i in range(27):
                     mouth_eye_vector[0, i] = model_input[i]
                     mouth_eye_vector_c[i] = model_input[i]
-                for i in range(3):
+                for i in range(6):
                     pose_vector[0, i] = model_input[i + 27]
                 if model is None:
                     output_image = input_image
@@ -399,17 +399,18 @@ class ModelClientProcess(Process):
 @torch.no_grad()
 def main():
     img = Image.open(f"character/{args.character}.png")
-    wRatio = img.size[0] / 256
-    img = img.resize((256, int(img.size[1] / wRatio)))
+    IMG_WIDTH = 512
+    wRatio = img.size[0] / IMG_WIDTH
+    img = img.resize((IMG_WIDTH, int(img.size[1] / wRatio)))
     for i, px in enumerate(img.getdata()):
         if px[3] <= 0:
-            y = i // 256
-            x = i % 256
+            y = i // IMG_WIDTH
+            x = i % IMG_WIDTH
             img.putpixel((x, y), (0, 0, 0, 0))
-    input_image = preprocessing_image(img.crop((0, 0, 256, 256))).unsqueeze(0)
+    input_image = preprocessing_image(img.crop((0, 0, IMG_WIDTH, IMG_WIDTH))).unsqueeze(0)
     extra_image = None
-    if img.size[1] > 256:
-        extra_image = np.array(img.crop((0, 256, img.size[0], img.size[1])))
+    if img.size[1] > IMG_WIDTH:
+        extra_image = np.array(img.crop((0, IMG_WIDTH, img.size[0], img.size[1])))
 
     print("Character Image Loaded:", args.character)
     cap = None
@@ -510,7 +511,7 @@ def main():
             tic = time.perf_counter()
         if args.debug_input:
             mouth_eye_vector_c = [0.0] * 27
-            pose_vector_c = [0.0] * 3
+            pose_vector_c = [0.0] * 6
 
             mouth_eye_vector_c[2] = math.sin(time.perf_counter() * 3)
             mouth_eye_vector_c[3] = math.sin(time.perf_counter() * 3)
@@ -558,7 +559,7 @@ def main():
             #                + ifacialmocap_pose[EYE_LOOK_DOWN_LEFT]) / 2.0 / 0.75
 
             mouth_eye_vector_c = [0.0] * 27
-            pose_vector_c = [0.0] * 3
+            pose_vector_c = [0.0] * 6
             for i in range(12, 39):
                 mouth_eye_vector_c[i - 12] = ifacialmocap_pose_converted[i]
             for i in range(39, 42):
@@ -586,7 +587,7 @@ def main():
             z_angle = mouse_data['z_angle']
 
             mouth_eye_vector_c = [0.0] * 27
-            pose_vector_c = [0.0] * 3
+            pose_vector_c = [0.0] * 6
 
             mouth_eye_vector_c[2] = eye_l_h_temp
             mouth_eye_vector_c[3] = eye_r_h_temp
@@ -635,7 +636,7 @@ def main():
             z_angle = np_pose[7]
 
             mouth_eye_vector_c = [0.0] * 27
-            pose_vector_c = [0.0] * 3
+            pose_vector_c = [0.0] * 6
 
             mouth_eye_vector_c[2] = eye_l_h_temp
             mouth_eye_vector_c[3] = eye_r_h_temp
@@ -692,9 +693,9 @@ def main():
             dy = -position_vector[1] * 600 * k_scale * args.extend_movement
         if args.bongo:
             rotate_angle-=5
-        rm = cv2.getRotationMatrix2D((128, 128), rotate_angle, k_scale)
-        rm[0, 2] += dx + args.output_w / 2 - 128
-        rm[1, 2] += dy + args.output_h / 2 - 128
+        rm = cv2.getRotationMatrix2D((IMG_WIDTH / 2, IMG_WIDTH / 2), rotate_angle, k_scale)
+        rm[0, 2] += dx + args.output_w / 2 - IMG_WIDTH / 2
+        rm[1, 2] += dy + args.output_h / 2 - IMG_WIDTH / 2
 
         postprocessed_image = cv2.warpAffine(
             postprocessed_image,
