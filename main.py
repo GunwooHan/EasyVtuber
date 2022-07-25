@@ -398,7 +398,7 @@ class ModelClientProcess(Process):
 
 @torch.no_grad()
 def main():
-    img = Image.open(f"character/{args.character}.png")
+    img = Image.open(f"data/images/{args.character}.png")
     IMG_WIDTH = 512
     wRatio = img.size[0] / IMG_WIDTH
     img = img.resize((IMG_WIDTH, int(img.size[1] / wRatio)))
@@ -650,6 +650,9 @@ def main():
             pose_vector_c[1] = y_angle * 2.0  # temp weight
             pose_vector_c[2] = (z_angle + 1.5) * 2  # temp weight
 
+        pose_vector_c[3] = pose_vector_c[1]
+        pose_vector_c[4] = pose_vector_c[2]
+
         model_input_arr = mouth_eye_vector_c
         model_input_arr.extend(pose_vector_c)
 
@@ -688,7 +691,7 @@ def main():
         dy = 0
         if args.extend_movement:
             k_scale = position_vector[2] * math.sqrt(args.extend_movement) + 1
-            rotate_angle = -position_vector[0] * 40 * args.extend_movement
+            rotate_angle = -position_vector[0] * 10 * args.extend_movement
             dx = position_vector[0] * 400 * k_scale * args.extend_movement
             dy = -position_vector[1] * 600 * k_scale * args.extend_movement
         if args.bongo:

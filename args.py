@@ -33,11 +33,11 @@ args = parser.parse_args()
 args.output_w = int(args.output_size.split('x')[0])
 args.output_h = int(args.output_size.split('x')[1])
 if args.cache is not None:
-    args.max_cache_len=int(convert_to_byte(args.cache)/262144)
+    args.max_cache_len=int(convert_to_byte(args.cache)/262144/4)
 else:
     args.max_cache_len=0
 if args.gpu_cache is not None:
-    args.max_gpu_cache_len=int(convert_to_byte(args.gpu_cache)/589824)
+    args.max_gpu_cache_len=int(convert_to_byte(args.gpu_cache)/589824/4)
 else:
     args.max_gpu_cache_len=0
 if args.output_webcam is None and args.output_dir is None: args.debug = True
