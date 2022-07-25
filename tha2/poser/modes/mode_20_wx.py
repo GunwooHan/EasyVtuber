@@ -71,7 +71,7 @@ class IFacialMocapPoseConverter20(IFacialMocapPoseConverter):
             args = IFacialMocapPoseConverter20Args()
         self.args = args
         pose_parameters = get_pose_parameters()
-        self.pose_size = 42
+        self.pose_size = 45
 
         self.eyebrow_troubled_left_index = pose_parameters.get_parameter_index("eyebrow_troubled_left")
         self.eyebrow_troubled_right_index = pose_parameters.get_parameter_index("eyebrow_troubled_right")
