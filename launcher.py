@@ -30,9 +30,9 @@ finally:
     args = default_arg
 
 p = None
-
+dirPath='data/images'
 characterList = []
-for item in sorted(os.listdir('character'), key=lambda x: -os.path.getmtime(os.path.join('character', x))):
+for item in sorted(os.listdir(dirPath), key=lambda x: -os.path.getmtime(os.path.join(dirPath, x))):
     if '.png' == item[-4:]:
         characterList.append(item[:-4])
 
@@ -189,7 +189,7 @@ def closeWindow():
 def handle_focus(event):
     characterList = []
     if event.widget == root:
-        for item in sorted(os.listdir('character'), key=lambda x: -os.path.getmtime(os.path.join('character', x))):
+        for item in sorted(os.listdir(dirPath), key=lambda x: -os.path.getmtime(os.path.join(dirPath, x))):
             if '.png' == item[-4:]:
                 characterList.append(item[:-4])
         char_combo.config(value=characterList)
