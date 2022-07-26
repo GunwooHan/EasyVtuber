@@ -22,7 +22,7 @@ class TalkingAnimeLight(nn.Module):
 
     def forward(self, image, mouth_eye_vector, pose_vector, mouth_eye_vector_c, ratio=None):
         x = image.clone()
-        if args.perf:
+        if args.perf=='model':
             tic=time.perf_counter()
         input_hash = hash(tuple(mouth_eye_vector_c))
         cached = self.face_cache.get(input_hash)
@@ -38,16 +38,16 @@ class TalkingAnimeLight(nn.Module):
             self.face_cache.move_to_end(input_hash)
         if args.debug and ratio is not None:
             ratio.value=self.hit / self.tot
-        if args.perf:
+        if args.perf=='model':
             print(" - face_morpher",(time.perf_counter()-tic)*1000)
             tic=time.perf_counter()
         x[:, :, 32:224, 32:224] = mouth_eye_morp_image
         rotate_image = self.two_algo_face_rotator(x, pose_vector)[:2]
-        if args.perf:
+        if args.perf=='model':
             print(" - rotator",(time.perf_counter()-tic)*1000)
             tic=time.perf_counter()
         output_image = self.combiner(rotate_image[0], rotate_image[1], pose_vector)
-        if args.perf:
+        if args.perf=='model':
             print(" - combiner",(time.perf_counter()-tic)*1000)
             tic=time.perf_counter()
         return output_image
@@ -63,9 +63,9 @@ class TalkingAnime3(nn.Module):
         self.hit = 0
 
     def forward(self, image, mouth_eye_vector, pose_vector, mouth_eye_vector_c, ratio=None):
-        x = image.clone()
-        if args.perf:
+        if args.perf=='model':
             tic=time.perf_counter()
+        x = image.clone()
         input_hash = hash(tuple(mouth_eye_vector_c))
         cached = self.face_cache.get(input_hash)
         self.tot+=1
@@ -80,20 +80,20 @@ class TalkingAnime3(nn.Module):
             self.face_cache.move_to_end(input_hash)
         if args.debug and ratio is not None:
             ratio.value=self.hit / self.tot
-        if args.perf:
+        if args.perf=='model':
             print(" - face_morpher",(time.perf_counter()-tic)*1000)
             tic=time.perf_counter()
         x[:, :, 32:32 + 192, (32 + 128):(32 + 192 + 128)] = mouth_eye_morp_image
         x_half=interpolate(x, size=(256, 256), mode='bilinear', align_corners=False)
         rotate_image = self.two_algo_face_body_rotator(x_half, pose_vector)
-        if args.perf:
+        if args.perf=='model':
             print(" - rotator",(time.perf_counter()-tic)*1000)
             tic=time.perf_counter()
         output_image = self.editor(x,
                                    interpolate(rotate_image[1], size=(512, 512), mode='bilinear', align_corners=False),
                                    interpolate(rotate_image[2], size=(512, 512), mode='bilinear', align_corners=False),
                                    pose_vector)[0]
-        if args.perf:
+        if args.perf=='model':
             print(" - editor",(time.perf_counter()-tic)*1000)
             tic=time.perf_counter()
         return output_image

@@ -28,7 +28,15 @@ from tha2.mocap.ifacialmocap_constants import *
 
 from args import args
 
+from tha3.util import torch_linear_to_srgb, resize_PIL_image, extract_PIL_image_from_filelike, \
+    extract_pytorch_image_from_PIL_image
+
 import collections
+
+
+def convert_linear_to_srgb(image: torch.Tensor) -> torch.Tensor:
+    rgb_image = torch_linear_to_srgb(image[0:3, :, :])
+    return torch.cat([rgb_image, image[3:4, :, :]], dim=0)
 
 
 class FPS:
@@ -173,32 +181,31 @@ class MouseClientProcess(Process):
             'z_angle': 0,
         }
         while True:
-            pos=mouse.position
+            pos = mouse.position
             # print(pos)
-            eye_limit=[0.8,0.5]
-            head_eye_reduce=0.6
-            head_slowness=0.2
+            eye_limit = [0.8, 0.5]
+            head_eye_reduce = 0.6
+            head_slowness = 0.2
             mouse_data = {
                 'eye_l_h_temp': 0,
                 'eye_r_h_temp': 0,
                 'mouth_ratio': 0,
-                'eye_y_ratio': np.interp(pos[1],[posLimit[1],posLimit[3]],[1,-1])*eye_limit[1],
-                'eye_x_ratio': np.interp(pos[0],[posLimit[0],posLimit[2]],[1,-1])*eye_limit[0],
-                'x_angle': np.interp(pos[1],[posLimit[1],posLimit[3]],[1,-1]),
-                'y_angle': np.interp(pos[0],[posLimit[0],posLimit[2]],[1,-1]),
+                'eye_y_ratio': np.interp(pos[1], [posLimit[1], posLimit[3]], [1, -1]) * eye_limit[1],
+                'eye_x_ratio': np.interp(pos[0], [posLimit[0], posLimit[2]], [1, -1]) * eye_limit[0],
+                'x_angle': np.interp(pos[1], [posLimit[1], posLimit[3]], [1, -1]),
+                'y_angle': np.interp(pos[0], [posLimit[0], posLimit[2]], [1, -1]),
                 'z_angle': 0,
             }
-            mouse_data['x_angle']=np.interp(head_slowness,[0,1],[prev['x_angle'],mouse_data['x_angle']])
-            mouse_data['y_angle']=np.interp(head_slowness,[0,1],[prev['y_angle'],mouse_data['y_angle']])
-            mouse_data['eye_y_ratio']-=mouse_data['x_angle']*eye_limit[1]*head_eye_reduce
-            mouse_data['eye_x_ratio']-=mouse_data['y_angle']*eye_limit[0]*head_eye_reduce
+            mouse_data['x_angle'] = np.interp(head_slowness, [0, 1], [prev['x_angle'], mouse_data['x_angle']])
+            mouse_data['y_angle'] = np.interp(head_slowness, [0, 1], [prev['y_angle'], mouse_data['y_angle']])
+            mouse_data['eye_y_ratio'] -= mouse_data['x_angle'] * eye_limit[1] * head_eye_reduce
+            mouse_data['eye_x_ratio'] -= mouse_data['y_angle'] * eye_limit[0] * head_eye_reduce
             if args.bongo:
-                mouse_data['y_angle']+=0.05
-                mouse_data['x_angle']+=0.05
-            prev=mouse_data
+                mouse_data['y_angle'] += 0.05
+                mouse_data['x_angle'] += 0.05
+            prev = mouse_data
             self.queue.put_nowait(mouse_data)
-            time.sleep(1/60)
-
+            time.sleep(1 / 60)
 
 
 class ModelClientProcess(Process):
@@ -352,14 +359,14 @@ class ModelClientProcess(Process):
             cached = model_cache.get(input_hash)
             tot += 1
             mouth_eye_vector_c = [0.0] * 27
-            if cached is not None and hit_in_a_row<self.model_fps_number.value:
+            if cached is not None and hit_in_a_row < self.model_fps_number.value:
                 self.output_queue.put_nowait(cached)
                 model_cache.move_to_end(input_hash)
                 hit += 1
                 hit_in_a_row += 1
             else:
                 hit_in_a_row = 0
-                if args.perf:
+                if args.perf == 'model':
                     tic = time.perf_counter()
                 for i in range(27):
                     mouth_eye_vector[0, i] = model_input[i]
@@ -371,16 +378,19 @@ class ModelClientProcess(Process):
                 else:
                     output_image = model(input_image, mouth_eye_vector, pose_vector, mouth_eye_vector_c,
                                          self.gpu_cache_hit_ratio)
-                if args.perf:
+                if args.perf == 'model':
                     torch.cuda.synchronize()
                     print("model", (time.perf_counter() - tic) * 1000)
                     tic = time.perf_counter()
-                postprocessed_image = output_image.cpu()
-                if args.perf:
+                postprocessed_image = output_image[0].float()
+                if args.perf == 'model':
                     print("cpu()", (time.perf_counter() - tic) * 1000)
                     tic = time.perf_counter()
-                postprocessed_image = postprocessing_image(postprocessed_image)
-                if args.perf:
+                postprocessed_image = convert_linear_to_srgb((postprocessed_image + 1.0) / 2.0)
+                c, h, w = postprocessed_image.shape
+                postprocessed_image = 255.0 * torch.transpose(postprocessed_image.reshape(c, h * w), 0, 1).reshape(h, w, c)
+                postprocessed_image = postprocessed_image.byte().detach().cpu().numpy()
+                if args.perf == 'model':
                     print("postprocess", (time.perf_counter() - tic) * 1000)
                     tic = time.perf_counter()
 
@@ -484,15 +494,15 @@ def main():
 
     pose_queue = []
     blender_data = create_default_blender_data()
-    mouse_data={
-        'eye_l_h_temp':0,
-        'eye_r_h_temp':0,
-        'mouth_ratio':0,
-        'eye_y_ratio':0,
-        'eye_x_ratio':0,
-        'x_angle':0,
-        'y_angle':0,
-        'z_angle':0,
+    mouse_data = {
+        'eye_l_h_temp': 0,
+        'eye_r_h_temp': 0,
+        'mouth_ratio': 0,
+        'eye_y_ratio': 0,
+        'eye_x_ratio': 0,
+        'x_angle': 0,
+        'y_angle': 0,
+        'z_angle': 0,
     }
 
     model_output = None
@@ -507,7 +517,7 @@ def main():
         # input_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # results = facemesh.process(input_frame)
 
-        if args.perf:
+        if args.perf == 'main':
             tic = time.perf_counter()
         if args.debug_input:
             mouth_eye_vector_c = [0.0] * 27
@@ -677,7 +687,7 @@ def main():
 
         postprocessed_image = model_output
 
-        if args.perf:
+        if args.perf == 'main':
             print('===')
             print("input", time.perf_counter() - tic)
             tic = time.perf_counter()
@@ -695,7 +705,7 @@ def main():
             dx = position_vector[0] * 400 * k_scale * args.extend_movement
             dy = -position_vector[1] * 600 * k_scale * args.extend_movement
         if args.bongo:
-            rotate_angle-=5
+            rotate_angle -= 5
         rm = cv2.getRotationMatrix2D((IMG_WIDTH / 2, IMG_WIDTH / 2), rotate_angle, k_scale)
         rm[0, 2] += dx + args.output_w / 2 - IMG_WIDTH / 2
         rm[1, 2] += dy + args.output_h / 2 - IMG_WIDTH / 2
@@ -705,7 +715,7 @@ def main():
             rm,
             (args.output_w, args.output_h))
 
-        if args.perf:
+        if args.perf == 'main':
             print("extendmovement", (time.perf_counter() - tic) * 1000)
             tic = time.perf_counter()
 
@@ -724,7 +734,7 @@ def main():
             postprocessed_image = a.save_image_to_numpy()
             postprocessed_image = cv2.merge((postprocessed_image, alpha_channel))
             postprocessed_image = cv2.cvtColor(postprocessed_image, cv2.COLOR_BGRA2RGBA)
-            if args.perf:
+            if args.perf == 'main':
                 print("anime4k", (time.perf_counter() - tic) * 1000)
                 tic = time.perf_counter()
         if args.alpha_split:
@@ -772,7 +782,7 @@ def main():
                 result_image = cv2.cvtColor(result_image, cv2.COLOR_RGBA2RGB)
             cam.send(result_image)
             cam.sleep_until_next_frame()
-        if args.perf:
+        if args.perf == 'main':
             print("output", (time.perf_counter() - tic) * 1000)
             tic = time.perf_counter()
 
