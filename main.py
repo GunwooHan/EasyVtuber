@@ -230,8 +230,9 @@ class ModelClientProcess(Process):
             model = model
             print("Pretrained Model Loaded")
 
-        mouth_eye_vector = torch.empty(1, 27)
-        pose_vector = torch.empty(1, 6)
+
+        mouth_eye_vector = torch.empty(1, 27,dtype=torch.half if args.model.endswith('half') else torch.float)
+        pose_vector = torch.empty(1, 6,dtype=torch.half if args.model.endswith('half') else torch.float)
 
         input_image = self.input_image.to(device)
         mouth_eye_vector = mouth_eye_vector.to(device)
@@ -417,7 +418,12 @@ def main():
             y = i // IMG_WIDTH
             x = i % IMG_WIDTH
             img.putpixel((x, y), (0, 0, 0, 0))
-    input_image = preprocessing_image(img.crop((0, 0, IMG_WIDTH, IMG_WIDTH))).unsqueeze(0)
+    input_image = preprocessing_image(img.crop((0, 0, IMG_WIDTH, IMG_WIDTH)))
+    if args.model.endswith('half'):
+        input_image = torch.from_numpy(input_image).half() * 2.0 - 1
+    else:
+        input_image = torch.from_numpy(input_image).float() * 2.0 - 1
+    input_image=input_image.unsqueeze(0)
     extra_image = None
     if img.size[1] > IMG_WIDTH:
         extra_image = np.array(img.crop((0, IMG_WIDTH, img.size[0], img.size[1])))

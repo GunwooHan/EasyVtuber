@@ -43,8 +43,7 @@ def preprocessing_image(image):
         if pixel[3] == 0.0:
             pixel[0:3] = 0.0
     reshaped_image = linear_image.transpose().reshape(c, h, w)
-    torch_image = torch.from_numpy(reshaped_image).float() * 2.0 - 1
-    return torch_image
+    return reshaped_image
 
 
 def postprocessing_image(tensor):

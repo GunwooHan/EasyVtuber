@@ -4,6 +4,9 @@ import torch.nn as nn
 
 import tha2.poser.modes.mode_20
 import tha3.poser.modes.standard_float
+import tha3.poser.modes.separable_float
+import tha3.poser.modes.standard_half
+import tha3.poser.modes.separable_half
 from torch.nn.functional import interpolate
 
 from args import args
@@ -55,9 +58,24 @@ class TalkingAnimeLight(nn.Module):
 class TalkingAnime3(nn.Module):
     def __init__(self):
         super(TalkingAnime3, self).__init__()
-        self.face_morpher = tha3.poser.modes.standard_float.load_face_morpher('data/models/standard_float/face_morpher.pt')
-        self.two_algo_face_body_rotator = tha3.poser.modes.standard_float.load_two_algo_generator('data/models/standard_float/two_algo_face_body_rotator.pt')
-        self.editor = tha3.poser.modes.standard_float.load_editor('data/models/standard_float/editor.pt')
+        if args.model == "standard_float":
+            self.face_morpher = tha3.poser.modes.standard_float.load_face_morpher('data/models/standard_float/face_morpher.pt')
+            self.two_algo_face_body_rotator = tha3.poser.modes.standard_float.load_two_algo_generator('data/models/standard_float/two_algo_face_body_rotator.pt')
+            self.editor = tha3.poser.modes.standard_float.load_editor('data/models/standard_float/editor.pt')
+        elif args.model == "standard_half":
+            self.face_morpher = tha3.poser.modes.standard_half.load_face_morpher('data/models/standard_half/face_morpher.pt')
+            self.two_algo_face_body_rotator = tha3.poser.modes.standard_half.load_two_algo_generator('data/models/standard_half/two_algo_face_body_rotator.pt')
+            self.editor = tha3.poser.modes.standard_half.load_editor('data/models/standard_half/editor.pt')
+        elif args.model == "separable_float":
+            self.face_morpher = tha3.poser.modes.separable_float.load_face_morpher('data/models/separable_float/face_morpher.pt')
+            self.two_algo_face_body_rotator = tha3.poser.modes.separable_float.load_two_algo_generator('data/models/separable_float/two_algo_face_body_rotator.pt')
+            self.editor = tha3.poser.modes.separable_float.load_editor('data/models/separable_float/editor.pt')
+        elif args.model == "separable_half":
+            self.face_morpher = tha3.poser.modes.separable_half.load_face_morpher('data/models/separable_half/face_morpher.pt')
+            self.two_algo_face_body_rotator = tha3.poser.modes.separable_half.load_two_algo_generator('data/models/separable_half/two_algo_face_body_rotator.pt')
+            self.editor = tha3.poser.modes.separable_half.load_editor('data/models/separable_half/editor.pt')
+        else:
+            raise RuntimeError("Invalid model: '%s'" % args.model)
         self.face_cache = OrderedDict()
         self.tot = 0
         self.hit = 0
