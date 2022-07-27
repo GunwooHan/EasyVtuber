@@ -372,9 +372,10 @@ class ModelClientProcess(Process):
                 hit_in_a_row = 0
                 if args.perf == 'model':
                     tic = time.perf_counter()
-                for i in range(12):
-                    eyebrow_vector[0, i] = model_input[i]
-                    eyebrow_vector_c[i] = model_input[i]
+                if args.eyebrow:
+                    for i in range(12):
+                        eyebrow_vector[0, i] = model_input[i]
+                        eyebrow_vector_c[i] = model_input[i]
                 for i in range(27):
                     mouth_eye_vector[0, i] = model_input[i+12]
                     mouth_eye_vector_c[i] = model_input[i+12]
