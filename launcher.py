@@ -17,6 +17,7 @@ default_arg={
         'is_bongo': False,
         'cache_simplify': 1,
         'cache_size': 1,
+        'model_type': 0,
     }
 
 try:
@@ -61,6 +62,12 @@ ttk.Label(launcher, text="iFacialMocap IP:Port").pack(fill='x', expand=True)
 
 ifm = tk.StringVar(value=args['ifm'])
 ttk.Entry(launcher, textvariable=ifm, state=False).pack(fill='x', expand=True)
+
+ttk.Label(launcher, text="Model Simplify").pack(fill='x', expand=True)
+model_type = tk.IntVar(value=args['model_type'])
+ttk.Radiobutton(launcher, text='Off', value=0, variable=model_type).pack(fill='x', expand=True)
+ttk.Radiobutton(launcher, text='Low', value=1, variable=model_type).pack(fill='x', expand=True)
+ttk.Radiobutton(launcher, text='High', value=2, variable=model_type).pack(fill='x', expand=True)
 
 ttk.Label(launcher, text="Facial Input Simplify").pack(fill='x', expand=True)
 cache_simplify = tk.IntVar(value=args['cache_simplify'])
@@ -115,6 +122,7 @@ def launch():
         'is_bongo': is_bongo.get(),
         'cache_simplify': cache_simplify.get(),
         'cache_size': cache_size.get(),
+        'model_type': model_type.get(),
     }
     f = open('launcher.json', mode='w')
     json.dump(args, f)
@@ -168,6 +176,9 @@ def launch():
             run_args.append(['0b','256mb','1gb','2gb','4gb','8gb'][args['cache_size']])
             run_args.append('--gpu_cache')
             run_args.append(['0b','128mb','512mb','1gb','2gb','4gb'][args['cache_size']])
+        if args['model_type'] is not None:
+            run_args.append('--model')
+            run_args.append(['standard_float','standard_half','separable_half'][args['model_type']])
         run_args.append('--output_size')
         run_args.append('512x512')
         print('Launched: '+' '.join(run_args))
