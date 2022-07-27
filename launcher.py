@@ -15,6 +15,7 @@ default_arg={
         'is_anime4k': False,
         'is_alpha_split': False,
         'is_bongo': False,
+        'is_eyebrow': False,
         'cache_simplify': 1,
         'cache_size': 1,
         'model_type': 0,
@@ -89,6 +90,9 @@ ttk.Radiobutton(launcher, text='4GB+2GB', value=4, variable=cache_size).pack(fil
 ttk.Radiobutton(launcher, text='8GB+4GB', value=5, variable=cache_size).pack(fill='x', expand=True)
 
 ttk.Label(launcher, text="Extra Options").pack(fill='x', expand=True)
+is_eyebrow = tk.BooleanVar(value=args['is_eyebrow'])
+ttk.Checkbutton(launcher, text='Eyebrow (iFM Only)', variable=is_eyebrow).pack(fill='x', expand=True)
+
 is_extend_movement = tk.BooleanVar(value=args['is_extend_movement'])
 ttk.Checkbutton(launcher, text='Extend Movement', variable=is_extend_movement).pack(fill='x', expand=True)
 
@@ -120,6 +124,7 @@ def launch():
         'is_anime4k': is_anime4k.get(),
         'is_alpha_split': is_alpha_split.get(),
         'is_bongo': is_bongo.get(),
+        'is_eyebrow': is_eyebrow.get(),
         'cache_simplify': cache_simplify.get(),
         'cache_size': cache_size.get(),
         'model_type': model_type.get(),
@@ -168,6 +173,8 @@ def launch():
             run_args.append('1')
         if args['is_bongo']:
             run_args.append('--bongo')
+        if args['is_eyebrow']:
+            run_args.append('--eyebrow')
         if args['cache_simplify'] is not None:
             run_args.append('--simplify')
             run_args.append(str(args['cache_simplify']))

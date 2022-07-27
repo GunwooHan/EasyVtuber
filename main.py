@@ -231,10 +231,12 @@ class ModelClientProcess(Process):
             print("Pretrained Model Loaded")
 
 
+        eyebrow_vector = torch.empty(1, 12,dtype=torch.half if args.model.endswith('half') else torch.float)
         mouth_eye_vector = torch.empty(1, 27,dtype=torch.half if args.model.endswith('half') else torch.float)
         pose_vector = torch.empty(1, 6,dtype=torch.half if args.model.endswith('half') else torch.float)
 
         input_image = self.input_image.to(device)
+        eyebrow_vector = eyebrow_vector.to(device)
         mouth_eye_vector = mouth_eye_vector.to(device)
         pose_vector = pose_vector.to(device)
 
@@ -274,29 +276,29 @@ class ModelClientProcess(Process):
                 simplify_arr[ifm_converter.head_y_index] = 100
                 simplify_arr[ifm_converter.eye_surprised_left_index] = 10
                 simplify_arr[ifm_converter.eye_surprised_right_index] = 10
-                model_input[ifm_converter.eye_wink_left_index - 12] += model_input[
-                    ifm_converter.eye_happy_wink_left_index - 12]
-                model_input[ifm_converter.eye_happy_wink_left_index - 12] = model_input[
-                                                                                ifm_converter.eye_wink_left_index - 12] / 2
-                model_input[ifm_converter.eye_wink_left_index - 12] = model_input[
-                                                                          ifm_converter.eye_wink_left_index - 12] / 2
-                model_input[ifm_converter.eye_wink_right_index - 12] += model_input[
-                    ifm_converter.eye_happy_wink_right_index - 12]
-                model_input[ifm_converter.eye_happy_wink_right_index - 12] = model_input[
-                                                                                 ifm_converter.eye_wink_right_index - 12] / 2
-                model_input[ifm_converter.eye_wink_right_index - 12] = model_input[
-                                                                           ifm_converter.eye_wink_right_index - 12] / 2
+                model_input[ifm_converter.eye_wink_left_index] += model_input[
+                    ifm_converter.eye_happy_wink_left_index]
+                model_input[ifm_converter.eye_happy_wink_left_index] = model_input[
+                                                                                ifm_converter.eye_wink_left_index] / 2
+                model_input[ifm_converter.eye_wink_left_index] = model_input[
+                                                                          ifm_converter.eye_wink_left_index] / 2
+                model_input[ifm_converter.eye_wink_right_index] += model_input[
+                    ifm_converter.eye_happy_wink_right_index]
+                model_input[ifm_converter.eye_happy_wink_right_index] = model_input[
+                                                                                 ifm_converter.eye_wink_right_index] / 2
+                model_input[ifm_converter.eye_wink_right_index] = model_input[
+                                                                           ifm_converter.eye_wink_right_index] / 2
 
-                uosum = model_input[ifm_converter.mouth_uuu_index - 12] + \
-                        model_input[ifm_converter.mouth_ooo_index - 12]
-                model_input[ifm_converter.mouth_ooo_index - 12] = uosum
-                model_input[ifm_converter.mouth_uuu_index - 12] = 0
-                is_open = (model_input[ifm_converter.mouth_aaa_index - 12] + model_input[
-                    ifm_converter.mouth_iii_index - 12] + uosum) > 0
-                model_input[ifm_converter.mouth_lowered_corner_left_index - 12] = 0
-                model_input[ifm_converter.mouth_lowered_corner_right_index - 12] = 0
-                model_input[ifm_converter.mouth_raised_corner_left_index - 12] = 0.5 if is_open else 0
-                model_input[ifm_converter.mouth_raised_corner_right_index - 12] = 0.5 if is_open else 0
+                uosum = model_input[ifm_converter.mouth_uuu_index] + \
+                        model_input[ifm_converter.mouth_ooo_index]
+                model_input[ifm_converter.mouth_ooo_index] = uosum
+                model_input[ifm_converter.mouth_uuu_index] = 0
+                is_open = (model_input[ifm_converter.mouth_aaa_index] + model_input[
+                    ifm_converter.mouth_iii_index] + uosum) > 0
+                model_input[ifm_converter.mouth_lowered_corner_left_index] = 0
+                model_input[ifm_converter.mouth_lowered_corner_right_index] = 0
+                model_input[ifm_converter.mouth_raised_corner_left_index] = 0.5 if is_open else 0
+                model_input[ifm_converter.mouth_raised_corner_right_index] = 0.5 if is_open else 0
                 simplify_arr[ifm_converter.mouth_lowered_corner_left_index] = 0
                 simplify_arr[ifm_converter.mouth_lowered_corner_right_index] = 0
                 simplify_arr[ifm_converter.mouth_raised_corner_left_index] = 0
@@ -312,8 +314,8 @@ class ModelClientProcess(Process):
                 simplify_arr[ifm_converter.head_x_index] = 50
                 simplify_arr[ifm_converter.head_y_index] = 50
                 simplify_arr[ifm_converter.neck_z_index] = 100
-                model_input[ifm_converter.eye_raised_lower_eyelid_left_index - 12] = 0
-                model_input[ifm_converter.eye_raised_lower_eyelid_right_index - 12] = 0
+                model_input[ifm_converter.eye_raised_lower_eyelid_left_index] = 0
+                model_input[ifm_converter.eye_raised_lower_eyelid_right_index] = 0
                 simplify_arr[ifm_converter.iris_rotation_x_index] = 10
                 simplify_arr[ifm_converter.iris_rotation_y_index] = 10
                 simplify_arr[ifm_converter.eye_wink_left_index] = 24
@@ -322,43 +324,44 @@ class ModelClientProcess(Process):
                 simplify_arr[ifm_converter.eye_happy_wink_right_index] = 24
                 simplify_arr[ifm_converter.eye_surprised_left_index] = 8
                 simplify_arr[ifm_converter.eye_surprised_right_index] = 8
-                model_input[ifm_converter.eye_wink_left_index - 12] += model_input[
-                    ifm_converter.eye_wink_right_index - 12]
-                model_input[ifm_converter.eye_wink_right_index - 12] = model_input[
-                                                                           ifm_converter.eye_wink_left_index - 12] / 2
-                model_input[ifm_converter.eye_wink_left_index - 12] = model_input[
-                                                                          ifm_converter.eye_wink_left_index - 12] / 2
+                model_input[ifm_converter.eye_wink_left_index] += model_input[
+                    ifm_converter.eye_wink_right_index]
+                model_input[ifm_converter.eye_wink_right_index] = model_input[
+                                                                           ifm_converter.eye_wink_left_index] / 2
+                model_input[ifm_converter.eye_wink_left_index] = model_input[
+                                                                          ifm_converter.eye_wink_left_index] / 2
 
-                model_input[ifm_converter.eye_surprised_left_index - 12] += model_input[
-                    ifm_converter.eye_surprised_right_index - 12]
-                model_input[ifm_converter.eye_surprised_right_index - 12] = model_input[
-                                                                                ifm_converter.eye_surprised_left_index - 12] / 2
-                model_input[ifm_converter.eye_surprised_left_index - 12] = model_input[
-                                                                               ifm_converter.eye_surprised_left_index - 12] / 2
+                model_input[ifm_converter.eye_surprised_left_index] += model_input[
+                    ifm_converter.eye_surprised_right_index]
+                model_input[ifm_converter.eye_surprised_right_index] = model_input[
+                                                                                ifm_converter.eye_surprised_left_index] / 2
+                model_input[ifm_converter.eye_surprised_left_index] = model_input[
+                                                                               ifm_converter.eye_surprised_left_index] / 2
 
-                model_input[ifm_converter.eye_happy_wink_left_index - 12] += model_input[
-                    ifm_converter.eye_happy_wink_right_index - 12]
-                model_input[ifm_converter.eye_happy_wink_right_index - 12] = model_input[
-                                                                                 ifm_converter.eye_happy_wink_left_index - 12] / 2
-                model_input[ifm_converter.eye_happy_wink_left_index - 12] = model_input[
-                                                                                ifm_converter.eye_happy_wink_left_index - 12] / 2
-                model_input[ifm_converter.mouth_aaa_index - 12] = min(
-                    model_input[ifm_converter.mouth_aaa_index - 12] +
-                    model_input[ifm_converter.mouth_ooo_index - 12] / 2 +
-                    model_input[ifm_converter.mouth_iii_index - 12] / 2 +
-                    model_input[ifm_converter.mouth_uuu_index - 12] / 2, 1
+                model_input[ifm_converter.eye_happy_wink_left_index] += model_input[
+                    ifm_converter.eye_happy_wink_right_index]
+                model_input[ifm_converter.eye_happy_wink_right_index] = model_input[
+                                                                                 ifm_converter.eye_happy_wink_left_index] / 2
+                model_input[ifm_converter.eye_happy_wink_left_index] = model_input[
+                                                                                ifm_converter.eye_happy_wink_left_index] / 2
+                model_input[ifm_converter.mouth_aaa_index] = min(
+                    model_input[ifm_converter.mouth_aaa_index] +
+                    model_input[ifm_converter.mouth_ooo_index] / 2 +
+                    model_input[ifm_converter.mouth_iii_index] / 2 +
+                    model_input[ifm_converter.mouth_uuu_index] / 2, 1
                 )
-                model_input[ifm_converter.mouth_ooo_index - 12] = 0
-                model_input[ifm_converter.mouth_iii_index - 12] = 0
-                model_input[ifm_converter.mouth_uuu_index - 12] = 0
+                model_input[ifm_converter.mouth_ooo_index] = 0
+                model_input[ifm_converter.mouth_iii_index] = 0
+                model_input[ifm_converter.mouth_uuu_index] = 0
             for i in range(4, args.simplify):
                 simplify_arr = [max(math.ceil(x * 0.8), 5) for x in simplify_arr]
-            for i in range(12, len(simplify_arr)):
+            for i in range(0, len(simplify_arr)):
                 if simplify_arr[i] > 0:
-                    model_input[i - 12] = round(model_input[i - 12] * simplify_arr[i]) / simplify_arr[i]
+                    model_input[i] = round(model_input[i] * simplify_arr[i]) / simplify_arr[i]
             input_hash = hash(tuple(model_input))
             cached = model_cache.get(input_hash)
             tot += 1
+            eyebrow_vector_c = [0.0] * 12
             mouth_eye_vector_c = [0.0] * 27
             if cached is not None and hit_in_a_row < self.model_fps_number.value:
                 self.output_queue.put_nowait(cached)
@@ -369,15 +372,18 @@ class ModelClientProcess(Process):
                 hit_in_a_row = 0
                 if args.perf == 'model':
                     tic = time.perf_counter()
+                for i in range(12):
+                    eyebrow_vector[0, i] = model_input[i]
+                    eyebrow_vector_c[i] = model_input[i]
                 for i in range(27):
-                    mouth_eye_vector[0, i] = model_input[i]
-                    mouth_eye_vector_c[i] = model_input[i]
+                    mouth_eye_vector[0, i] = model_input[i+12]
+                    mouth_eye_vector_c[i] = model_input[i+12]
                 for i in range(6):
-                    pose_vector[0, i] = model_input[i + 27]
+                    pose_vector[0, i] = model_input[i + 27+12]
                 if model is None:
                     output_image = input_image
                 else:
-                    output_image = model(input_image, mouth_eye_vector, pose_vector, mouth_eye_vector_c,
+                    output_image = model(input_image, mouth_eye_vector, pose_vector, eyebrow_vector, mouth_eye_vector_c, eyebrow_vector_c,
                                          self.gpu_cache_hit_ratio)
                 if args.perf == 'model':
                     torch.cuda.synchronize()
@@ -526,6 +532,7 @@ def main():
         if args.perf == 'main':
             tic = time.perf_counter()
         if args.debug_input:
+            eyebrow_vector_c = [0.0] * 12
             mouth_eye_vector_c = [0.0] * 27
             pose_vector_c = [0.0] * 6
 
@@ -574,8 +581,11 @@ def main():
             #                - ifacialmocap_pose[EYE_LOOK_DOWN_RIGHT]
             #                + ifacialmocap_pose[EYE_LOOK_DOWN_LEFT]) / 2.0 / 0.75
 
+            eyebrow_vector_c = [0.0] * 12
             mouth_eye_vector_c = [0.0] * 27
             pose_vector_c = [0.0] * 6
+            for i in range(0, 12):
+                eyebrow_vector_c[i] = ifacialmocap_pose_converted[i]
             for i in range(12, 39):
                 mouth_eye_vector_c[i - 12] = ifacialmocap_pose_converted[i]
             for i in range(39, 42):
@@ -602,6 +612,7 @@ def main():
             y_angle = mouse_data['y_angle']
             z_angle = mouse_data['z_angle']
 
+            eyebrow_vector_c = [0.0] * 12
             mouth_eye_vector_c = [0.0] * 27
             pose_vector_c = [0.0] * 6
 
@@ -669,7 +680,8 @@ def main():
         pose_vector_c[3] = pose_vector_c[1]
         pose_vector_c[4] = pose_vector_c[2]
 
-        model_input_arr = mouth_eye_vector_c
+        model_input_arr = eyebrow_vector_c
+        model_input_arr.extend(mouth_eye_vector_c)
         model_input_arr.extend(pose_vector_c)
 
         model_process.input_queue.put_nowait(model_input_arr)
