@@ -73,18 +73,17 @@ Fork自 https://github.com/GunwooHan/EasyVtuber
 
 ### 下载预训练模型  
 
-https://github.com/pkhungurn/talking-head-anime-2-demo#download-the-model  
+https://github.com/pkhungurn/talking-head-anime-3-demo#download-the-models  
 从原repo中下载（this Dropbox link）的压缩文件  
-解压到`pretrained`文件夹中，与`PUT_MODEL_HERE`同级  
+解压到`data/models`文件夹中，与`placeholder.txt`同级  
 正确的目录层级为  
 ```
-+ pretrained
-  - combiner.pt
-  - eyebrow_decomposer.pt
-  - eyebrow_morphing_combiner.pt
-  - face_morpher.pt
-  - two_algo_face_rotator.pt
-  - PUT_MODEL_HERE
++ models
+  - separable_float
+  - separable_half
+  - standard_float
+  - standard_half
+  - placeholder.txt
 ```
 
 ### 输入输出设备  
