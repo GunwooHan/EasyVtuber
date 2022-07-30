@@ -10,10 +10,10 @@ python -c "import sys; print('OK! Python version verified' if sys.version_info[0
 )
 echo.
 echo 2. Pretrained data
-if exist pretrained\combiner.pt (
+if exist data\models\standard_float\editor.pt (
 echo OK! Pretrained data found.
 ) else (
-echo Pretrained data not found, use link 00B and extract it to pretrained/..
+echo Pretrained data not found, use link 00B and extract it to data/models..
 )
 echo.
 echo 3. UnityCapture
