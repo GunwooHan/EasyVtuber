@@ -663,6 +663,7 @@ def main():
             y_angle = np_pose[6]
             z_angle = np_pose[7]
 
+            eyebrow_vector_c = [0.0] * 12
             mouth_eye_vector_c = [0.0] * 27
             pose_vector_c = [0.0] * 6
 
