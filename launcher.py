@@ -7,7 +7,7 @@ from tkinter import ttk
 import json
 
 default_arg={
-        'character': 'y',
+        'character': 'lambda_00',
         'input': 2,
         'output': 2,
         'ifm': None,
