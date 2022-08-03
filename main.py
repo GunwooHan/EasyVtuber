@@ -417,6 +417,7 @@ class ModelClientProcess(Process):
 @torch.no_grad()
 def main():
     img = Image.open(f"data/images/{args.character}.png")
+    img = img.convert('RGBA')
     IMG_WIDTH = 512
     wRatio = img.size[0] / IMG_WIDTH
     img = img.resize((IMG_WIDTH, int(img.size[1] / wRatio)))
