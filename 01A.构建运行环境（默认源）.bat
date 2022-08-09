@@ -1,12 +1,5 @@
 @echo off
-echo Activating Python Virtual Environment...
-call bin\Scripts\activate.bat
-if defined VIRTUAL_ENV (
-pip install wheel
-pip install -r .\requirements.txt
-pip install torch --extra-index-url https://download.pytorch.org/whl/cu113
-) else (
-echo Missing .\bin\Scripts\activate.bat, Python venv cannot be activated.
-echo Please check the project folder. Only english character is allowed in their paths.
-)
+cd bin
+python.exe -m pip install -r ..\requirements.txt --no-warn-script-location
+python.exe -m pip install torch --extra-index-url https://download.pytorch.org/whl/cu113 --no-warn-script-location
 pause
