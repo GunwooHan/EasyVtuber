@@ -1,7 +1,6 @@
-.python310
-.Scripts
+python310.zip
 .
 
+sys.path.append('')
 # Uncomment to run site.main() automatically
-sitecustomize.py
 import site
