@@ -1,6 +1,5 @@
 python310.zip
 .
 
-sys.path.append('')
 # Uncomment to run site.main() automatically
 import site
