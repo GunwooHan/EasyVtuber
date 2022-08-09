@@ -1,27 +1,9 @@
 @echo off
-echo 1. Check Python Install
-where pip>nul
-if %ERRORLEVEL% NEQ 0 (
-echo Python or pip not found, use link 00A.
-) else (
-python --version
-pip --version
-python -c "import sys; print('OK! Python version verified' if sys.version_info[0]>=3 and sys.version_info[1]>7 else 'Python version less than 3.8, use link 00A to get the latest Python3.')"
-)
-echo.
-echo 2. Pretrained data
+echo 1. Pretrained data
 if exist data\models\standard_float\editor.pt (
 echo OK! Pretrained data found.
 ) else (
 echo Pretrained data not found, use link 00B and extract it to data/models..
-)
-echo.
-echo 3. UnityCapture
-reg query HKLM\SOFTWARE\Classes /s /f UnityCaptureFilter32bit.dll>nul
-if errorlevel 1 (
-echo UnityCapture not found, use link 00C if you need RGBA output.
-) else (
-echo OK! UnityCapture found.
 )
 echo.
 echo.
