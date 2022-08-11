@@ -1,1 +1,2 @@
-pip cache purge
+cd bin
+python.exe -m pip cache purge

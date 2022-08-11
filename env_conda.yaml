@@ -136,3 +136,4 @@ dependencies:
     - protobuf==3.20.1
     - pyvirtualcam==0.9.1
     - pynput==1.7.6
+    - pyanime4k==2.5.2

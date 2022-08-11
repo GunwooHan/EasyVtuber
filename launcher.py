@@ -3,6 +3,7 @@ import subprocess
 import tkinter as tk
 from tkinter import ttk
 import json
+import sys
 
 default_arg={
         'character': 'lambda_00',
@@ -71,7 +72,7 @@ def launch():
         p = None
         launch_btn.config(text="Save & Launch")
     else:
-        run_args = [os.path.join(os.getcwd(), 'venv', 'Scripts', 'python.exe'), 'main.py']
+        run_args = [sys.executable, 'main.py']
         if len(args['character']):
             run_args.append('--character')
             run_args.append(args['character'])
