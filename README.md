@@ -27,7 +27,6 @@ Fork自 https://github.com/GunwooHan/EasyVtuber
 
 ## Installation(嵌入式Python version)  
 在bin文件夹内是一个基于Python3.10.5的Win64嵌入式版构建的轻量化运行环境  
-使用这个环境替代Venv就不再需要安装Python也不需要用脚本创建Venv了  
 对于只是需要体验这个库的用户，推荐使用这个方式安装。  
 
 ### 下载ZIP并解压或者克隆本Repo  
@@ -67,6 +66,31 @@ https://github.com/pkhungurn/talking-head-anime-3-demo#download-the-models
 ### 配置输入输出设备
 在成功进行Debug输出之后，请移步之后的输入输出设备一节进行进一步配置以输出到OBS。
 
+## Installation(Venv version)  
+如果你还需要使用之前的Venv方案，请参考以下步骤  
+
+### 下载ZIP并解压或者克隆本Repo  
+点击[`Download ZIP`](../../archive/master.zip) 下载并解压，或者使用git克隆该仓库到你找得到的地方。  
+完整展开venv需要大约5.5G的硬盘空间。  
+
+### 创建虚拟环境
+此处默认你有一个正确的Python安装，不会装的话请使用前文的嵌入式方案  
+在项目目录下运行`python -m venv venv`创建虚拟环境
+
+### 切换到虚拟环境
+之后的操作都需要切换到虚拟环境中进行，分辨方式为命令行前会有`(venv)`标识  
+在控制台运行`venv\Scripts\activate.bat`切换到刚才创建的虚拟环境  
+之后你的python pip等操作都会在虚拟环境中执行  
+
+### 安装依赖  
+在虚拟环境中执行以下命令  
+`pip install -r .\requirements.txt`  
+`pip install torch --extra-index-url https://download.pytorch.org/whl/cu113`  
+
+### 运行启动器  
+在虚拟环境中执行以下命令  
+`python launcher.py`  
+
 
 ## Installation(Conda version)  
 
@@ -102,7 +126,7 @@ https://github.com/pkhungurn/talking-head-anime-3-demo#download-the-models
   - placeholder.txt
 ```
 
-### 输入输出设备  
+## 输入输出设备  
 
 #### OBS Virtual Camera
 
