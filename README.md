@@ -16,7 +16,7 @@ Fork自 https://github.com/GunwooHan/EasyVtuber
 ### 硬件  
 
 - 支持FaceID的iPhone（使用ifacialmocap软件，需购买，需要稳定的WIFI连接）或网络摄像头（使用OpenCV）  
-- 支持PyTorch CUDA的NVIDIA显卡（参考：TUF RTX3080 默频 26FPS 90%占用）
+- 支持PyTorch CUDA的NVIDIA显卡（参考：TUF RTX3080 默频 40FPS 80%占用）
 ### 软件
 
 - 本方案在Windows 10上测试可用
@@ -24,6 +24,48 @@ Fork自 https://github.com/GunwooHan/EasyVtuber
 - OBS或Unity Capture（虚拟摄像头方案）
 - Photoshop或其他图片处理软件
 - 科学上网方案，看懂英文网站和报错的能力
+
+## Installation(嵌入式Python version)  
+在bin文件夹内是一个基于Python3.10.5的Win64嵌入式版构建的轻量化运行环境  
+使用这个环境替代Venv就不再需要安装Python也不需要用脚本创建Venv了  
+对于只是需要体验这个库的用户，推荐使用这个方式安装。  
+
+### 下载ZIP并解压或者克隆本Repo  
+点击[`Download ZIP`](../../archive/master.zip) 下载并解压，或者使用git克隆该仓库到你找得到的地方。  
+完整展开venv需要大约5.5G的硬盘空间。  
+
+### 下载预训练模型  
+使用00B快捷方式或者以下链接下载模型文件  
+https://github.com/pkhungurn/talking-head-anime-3-demo#download-the-models  
+从原repo中下载（this Dropbox link）的压缩文件  
+解压到`data/models`文件夹中，与`placeholder.txt`同级  
+正确的目录层级为  
+```
++ models
+  - separable_float
+  - separable_half
+  - standard_float
+  - standard_half
+  - placeholder.txt
+```
+如果不确定自己有没有解压到正确位置，可以使用`00.检查并补齐必需文件.bat`  
+
+### 构建运行环境
+运行适合你的地域的`01A.构建运行环境（默认源）.bat`或者`01B.构建运行环境（国内源）.bat`  
+这个脚本会使用pip在bin目录下安装所有需要的依赖  
+两个脚本可以互相替代，并且支持从中断的位置继续  
+如果出现网络相关报错，直接关掉控制台，调整网络，重新运行即可  
+![step01success](assets/01Success.png)  
+完全安装完成后再次运行脚本的输出如图所示。一般来说安装全程没有红字就是成功结束。  
+
+### 使用启动器测试结果
+运行`02B启动器（调试输出）.bat`  
+直接点击界面底部的`Save & Launch`
+如果看到了弹出的opencv输出窗体，则安装成功完成
+![img.png](assets/02success.png)
+
+### 配置输入输出设备
+在成功进行Debug输出之后，请移步之后的输入输出设备一节进行进一步配置以输出到OBS。
 
 ## Installation(Venv version)  
 对于只是需要体验这个库的用户，推荐使用这个方式安装。  
