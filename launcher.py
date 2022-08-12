@@ -1,6 +1,7 @@
 import os
 import subprocess
 import tkinter as tk
+import tkinter.messagebox
 from tkinter import ttk
 import json
 import sys
@@ -63,6 +64,12 @@ def launch():
         'cache_size': cache_size.get(),
         'model_type': model_type.get(),
     }
+
+    if args['input'] == 0:
+        if len(args['ifm'])==0:
+            tkinter.messagebox.showinfo('EasyVtuber Launcher','Please Input iFacialMocap IP:Port')
+            return
+
     f = open('launcher.json', mode='w')
     json.dump(args, f)
     f.close()
@@ -119,7 +126,12 @@ def launch():
             run_args.append(['0b','128mb','512mb','1gb','2gb','4gb'][args['cache_size']])
         if args['model_type'] is not None:
             run_args.append('--model')
-            run_args.append(['standard_float','standard_half','separable_half'][args['model_type']])
+            model_name=['standard_float','standard_half','separable_half'][args['model_type']]
+            run_args.append(model_name)
+            if not os.path.exists('data/models/'+model_name+'/face_morpher.pt'):
+                tkinter.messagebox.showinfo('EasyVtuber Launcher', 'Missing Model File: '+'data/models/'+model_name)
+                return
+
         run_args.append('--output_size')
         run_args.append('512x512')
         print('Launched: '+' '.join(run_args))
