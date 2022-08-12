@@ -129,7 +129,7 @@ def launch():
             model_name=['standard_float','standard_half','separable_half'][args['model_type']]
             run_args.append(model_name)
             if not os.path.exists('data/models/'+model_name+'/face_morpher.pt'):
-                tkinter.messagebox.showinfo('EasyVtuber Launcher', 'Missing Model File: '+'data/models/'+model_name)
+                tkinter.messagebox.showinfo('EasyVtuber Launcher', 'Missing Model File: '+'data/models/'+model_name+'\nCheck link 00B or README.md for more info.')
                 return
 
         run_args.append('--output_size')
