@@ -126,6 +126,10 @@ https://github.com/pkhungurn/talking-head-anime-3-demo#download-the-models
   - placeholder.txt
 ```
 
+### 运行启动器  
+在Conda环境中执行以下命令  
+`python launcher.py`  
+
 ## 输入输出设备  
 
 #### OBS Virtual Camera
