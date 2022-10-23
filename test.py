@@ -9,6 +9,8 @@
 #     type=ac.ProcessorType.CPU_ACNet,
 # )
 # a.set_arguments(parameters)
+import struct
+
 import cv2
 #
 # img = cv2.imread("character/test41.png")
@@ -91,7 +93,7 @@ import time
 import tha2.poser.modes.mode_20_wx
 from tha2.mocap.ifacialmocap_constants import *
 
-ifm='192.168.31.182:49983'
+ifm='127.0.0.1:11573'
 
 
 
@@ -103,7 +105,7 @@ class ClientProcess(Process):
         self.address = ifm.split(':')[0]
         self.port = int(ifm.split(':')[1])
         self.perf_time = 0
-        self.ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
+        # self.ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
         self.a_min=None
         self.a_max=None
 
@@ -132,22 +134,25 @@ class ClientProcess(Process):
                     continue
                 else:
                     raise e
-            socket_string = socket_bytes.decode("utf-8")
-            # print(socket_string)
+
+
+            # socket_string = socket_bytes.decode("utf-8")
+            osf_data=(struct.unpack('=di2f2fB1f4f3f3f68f136f210f14f',socket_bytes))
+            print(osf_data[432:])
 
             # blender_data = json.loads(socket_string)
-            data = self.convert_from_blender_data(socket_string)
-            data=self.ifm_converter.convert(data)
+            # data = self.convert_from_blender_data(socket_string)
+            # data=self.ifm_converter.convert(data)
             # print(data)
-            if(self.a_max is None):
-                self.a_max=[x for x in data]
-            else:
-                self.a_max=[max(data[i],self.a_max[i]) for i in range(len(data))]
-            if(self.a_min is None):
-                self.a_min=[x for x in data]
-            else:
-                self.a_min=[min(data[i],self.a_min[i]) for i in range(len(data))]
-            print([[self.a_min[i],self.a_max[i]] for i in range(len(data))])
+            # if(self.a_max is None):
+            #     self.a_max=[x for x in data]
+            # else:
+            #     self.a_max=[max(data[i],self.a_max[i]) for i in range(len(data))]
+            # if(self.a_min is None):
+            #     self.a_min=[x for x in data]
+            # else:
+            #     self.a_min=[min(data[i],self.a_min[i]) for i in range(len(data))]
+            # print([[self.a_min[i],self.a_max[i]] for i in range(len(data))])
             cur_time = time.perf_counter()
             fps = 1 / (cur_time - self.perf_time)
             self.perf_time = cur_time
