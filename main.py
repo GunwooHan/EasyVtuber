@@ -1,3 +1,5 @@
+import struct
+
 import cv2
 import torch
 import pyvirtualcam
@@ -76,6 +78,112 @@ def create_default_blender_data():
     data[RIGHT_EYE_BONE_QUAT] = [0.0, 0.0, 0.0, 1.0]
 
     return data
+
+
+class OSFClientProcess(Process):
+    def __init__(self):
+        super().__init__()
+        self.queue = Queue()
+        self.should_terminate = Value('b', False)
+        self.address = args.osf.split(':')[0]
+        self.port = int(args.osf.split(':')[1])
+        self.ifm_fps_number = Value('f', 0.0)
+        self.perf_time = 0
+
+    def run(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.setblocking(False)
+        self.socket.bind(("", self.port))
+        self.socket.settimeout(0.1)
+        ifm_fps = FPS()
+        while True:
+            if self.should_terminate.value:
+                break
+            try:
+                socket_bytes = self.socket.recv(8192)
+            except socket.error as e:
+                err = e.args[0]
+                if err == errno.EAGAIN or err == errno.EWOULDBLOCK or err == 'timed out':
+                    continue
+                else:
+                    raise e
+
+            # socket_string = socket_bytes.decode("utf-8")
+            osf_raw = (struct.unpack('=di2f2fB1f4f3f3f68f136f210f14f', socket_bytes))
+            # print(osf_raw[432:])
+            data = {}
+            OpenSeeDataIndex = [
+                'time',
+                'id',
+                'cameraResolutionW',
+                'cameraResolutionH',
+                'rightEyeOpen',
+                'leftEyeOpen',
+                'got3DPoints',
+                'fit3DError',
+                'rawQuaternionX',
+                'rawQuaternionY',
+                'rawQuaternionZ',
+                'rawQuaternionW',
+                'rawEulerX',
+                'rawEulerY',
+                'rawEulerZ',
+                'translationY',
+                'translationX',
+                'translationZ',
+            ]
+            for i in range(len(OpenSeeDataIndex)):
+                data[OpenSeeDataIndex[i]] = osf_raw[i]
+            data['translationY'] *= -1
+            data['translationZ'] *= -1
+            data['rotationY'] = data['rawEulerY']
+            data['rotationX'] = (-data['rawEulerX'] + 360)%360-180
+            data['rotationZ'] = (data['rawEulerZ'] - 90)
+            OpenSeeFeatureIndex = [
+                'EyeLeft',
+                'EyeRight',
+                'EyebrowSteepnessLeft',
+                'EyebrowUpDownLeft',
+                'EyebrowQuirkLeft',
+                'EyebrowSteepnessRight',
+                'EyebrowUpDownRight',
+                'EyebrowQuirkRight',
+                'MouthCornerUpDownLeft',
+                'MouthCornerInOutLeft',
+                'MouthCornerUpDownRight',
+                'MouthCornerInOutRight',
+                'MouthOpen',
+                'MouthWide'
+            ]
+
+            for i in range(68):
+                data['confidence' + str(i)] = osf_raw[i + 18]
+            for i in range(68):
+                data['pointsX' + str(i)] = osf_raw[i * 2 + 18 + 68]
+                data['pointsY' + str(i)] = osf_raw[i * 2 + 18 + 68 + 1]
+            for i in range(70):
+                data['points3DX' + str(i)] = osf_raw[i * 3 + 18 + 68 + 68 * 2]
+                data['points3DY' + str(i)] = osf_raw[i * 3 + 18 + 68 + 68 * 2 + 1]
+                data['points3DZ' + str(i)] = osf_raw[i * 3 + 18 + 68 + 68 * 2 + 2]
+
+            for i in range(len(OpenSeeFeatureIndex)):
+                data[OpenSeeFeatureIndex[i]] = osf_raw[i + 432]
+            # print(data['rotationX'],data['rotationY'],data['rotationZ'])
+
+            a = np.array([
+                data['points3DX66'] - data['points3DX68'] + data['points3DX67'] - data['points3DX69'],
+                data['points3DY66'] - data['points3DY68'] + data['points3DY67'] - data['points3DY69'],
+                data['points3DZ66'] - data['points3DZ68'] + data['points3DZ67'] - data['points3DZ69']
+            ])
+            a = (a / np.linalg.norm(a))
+            data['eyeRotationX'] = a[0]
+            data['eyeRotationY'] = a[1]
+            try:
+                self.queue.put_nowait(data)
+            except queue.Full:
+                pass
+        self.queue.close()
+        self.socket.close()
 
 
 ifm_converter = tha2.poser.modes.mode_20_wx.IFacialMocapPoseConverter20()
@@ -230,10 +338,9 @@ class ModelClientProcess(Process):
             model = model
             print("Pretrained Model Loaded")
 
-
-        eyebrow_vector = torch.empty(1, 12,dtype=torch.half if args.model.endswith('half') else torch.float)
-        mouth_eye_vector = torch.empty(1, 27,dtype=torch.half if args.model.endswith('half') else torch.float)
-        pose_vector = torch.empty(1, 6,dtype=torch.half if args.model.endswith('half') else torch.float)
+        eyebrow_vector = torch.empty(1, 12, dtype=torch.half if args.model.endswith('half') else torch.float)
+        mouth_eye_vector = torch.empty(1, 27, dtype=torch.half if args.model.endswith('half') else torch.float)
+        pose_vector = torch.empty(1, 6, dtype=torch.half if args.model.endswith('half') else torch.float)
 
         input_image = self.input_image.to(device)
         eyebrow_vector = eyebrow_vector.to(device)
@@ -279,15 +386,15 @@ class ModelClientProcess(Process):
                 model_input[ifm_converter.eye_wink_left_index] += model_input[
                     ifm_converter.eye_happy_wink_left_index]
                 model_input[ifm_converter.eye_happy_wink_left_index] = model_input[
-                                                                                ifm_converter.eye_wink_left_index] / 2
+                                                                           ifm_converter.eye_wink_left_index] / 2
                 model_input[ifm_converter.eye_wink_left_index] = model_input[
-                                                                          ifm_converter.eye_wink_left_index] / 2
+                                                                     ifm_converter.eye_wink_left_index] / 2
                 model_input[ifm_converter.eye_wink_right_index] += model_input[
                     ifm_converter.eye_happy_wink_right_index]
                 model_input[ifm_converter.eye_happy_wink_right_index] = model_input[
-                                                                                 ifm_converter.eye_wink_right_index] / 2
+                                                                            ifm_converter.eye_wink_right_index] / 2
                 model_input[ifm_converter.eye_wink_right_index] = model_input[
-                                                                           ifm_converter.eye_wink_right_index] / 2
+                                                                      ifm_converter.eye_wink_right_index] / 2
 
                 uosum = model_input[ifm_converter.mouth_uuu_index] + \
                         model_input[ifm_converter.mouth_ooo_index]
@@ -327,23 +434,23 @@ class ModelClientProcess(Process):
                 model_input[ifm_converter.eye_wink_left_index] += model_input[
                     ifm_converter.eye_wink_right_index]
                 model_input[ifm_converter.eye_wink_right_index] = model_input[
-                                                                           ifm_converter.eye_wink_left_index] / 2
+                                                                      ifm_converter.eye_wink_left_index] / 2
                 model_input[ifm_converter.eye_wink_left_index] = model_input[
-                                                                          ifm_converter.eye_wink_left_index] / 2
+                                                                     ifm_converter.eye_wink_left_index] / 2
 
                 model_input[ifm_converter.eye_surprised_left_index] += model_input[
                     ifm_converter.eye_surprised_right_index]
                 model_input[ifm_converter.eye_surprised_right_index] = model_input[
-                                                                                ifm_converter.eye_surprised_left_index] / 2
+                                                                           ifm_converter.eye_surprised_left_index] / 2
                 model_input[ifm_converter.eye_surprised_left_index] = model_input[
-                                                                               ifm_converter.eye_surprised_left_index] / 2
+                                                                          ifm_converter.eye_surprised_left_index] / 2
 
                 model_input[ifm_converter.eye_happy_wink_left_index] += model_input[
                     ifm_converter.eye_happy_wink_right_index]
                 model_input[ifm_converter.eye_happy_wink_right_index] = model_input[
-                                                                                 ifm_converter.eye_happy_wink_left_index] / 2
+                                                                            ifm_converter.eye_happy_wink_left_index] / 2
                 model_input[ifm_converter.eye_happy_wink_left_index] = model_input[
-                                                                                ifm_converter.eye_happy_wink_left_index] / 2
+                                                                           ifm_converter.eye_happy_wink_left_index] / 2
                 model_input[ifm_converter.mouth_aaa_index] = min(
                     model_input[ifm_converter.mouth_aaa_index] +
                     model_input[ifm_converter.mouth_ooo_index] / 2 +
@@ -377,14 +484,15 @@ class ModelClientProcess(Process):
                         eyebrow_vector[0, i] = model_input[i]
                         eyebrow_vector_c[i] = model_input[i]
                 for i in range(27):
-                    mouth_eye_vector[0, i] = model_input[i+12]
-                    mouth_eye_vector_c[i] = model_input[i+12]
+                    mouth_eye_vector[0, i] = model_input[i + 12]
+                    mouth_eye_vector_c[i] = model_input[i + 12]
                 for i in range(6):
-                    pose_vector[0, i] = model_input[i + 27+12]
+                    pose_vector[0, i] = model_input[i + 27 + 12]
                 if model is None:
                     output_image = input_image
                 else:
-                    output_image = model(input_image, mouth_eye_vector, pose_vector, eyebrow_vector, mouth_eye_vector_c, eyebrow_vector_c,
+                    output_image = model(input_image, mouth_eye_vector, pose_vector, eyebrow_vector, mouth_eye_vector_c,
+                                         eyebrow_vector_c,
                                          self.gpu_cache_hit_ratio)
                 if args.perf == 'model':
                     torch.cuda.synchronize()
@@ -396,7 +504,8 @@ class ModelClientProcess(Process):
                     tic = time.perf_counter()
                 postprocessed_image = convert_linear_to_srgb((postprocessed_image + 1.0) / 2.0)
                 c, h, w = postprocessed_image.shape
-                postprocessed_image = 255.0 * torch.transpose(postprocessed_image.reshape(c, h * w), 0, 1).reshape(h, w, c)
+                postprocessed_image = 255.0 * torch.transpose(postprocessed_image.reshape(c, h * w), 0, 1).reshape(h, w,
+                                                                                                                   c)
                 postprocessed_image = postprocessed_image.byte().detach().cpu().numpy()
                 if args.perf == 'model':
                     print("postprocess", (time.perf_counter() - tic) * 1000)
@@ -431,7 +540,7 @@ def main():
         input_image = torch.from_numpy(input_image).half() * 2.0 - 1
     else:
         input_image = torch.from_numpy(input_image).float() * 2.0 - 1
-    input_image=input_image.unsqueeze(0)
+    input_image = input_image.unsqueeze(0)
     extra_image = None
     if img.size[1] > IMG_WIDTH:
         extra_image = np.array(img.crop((0, IMG_WIDTH, img.size[0], img.size[1])))
@@ -447,9 +556,15 @@ def main():
             client_process = IFMClientProcess()
             client_process.daemon = True
             client_process.start()
-            print("IFM Service Running:", args.ifm)
+            print("iFacialMocap Service Running:", args.ifm)
 
-        if args.mouse_input is not None:
+        elif args.osf is not None:
+            client_process = OSFClientProcess()
+            client_process.daemon = True
+            client_process.start()
+            print("OpenSeeFace Service Running:", args.osf)
+
+        elif args.mouse_input is not None:
             client_process = MouseClientProcess()
             client_process.daemon = True
             client_process.start()
@@ -505,9 +620,13 @@ def main():
         print("Anime4K Loaded")
 
     position_vector = [0, 0, 0, 1]
+    position_vector_0 = None
+    pose_vector_0 = None
 
     pose_queue = []
-    blender_data = create_default_blender_data()
+    blender_data={}
+    if(args.ifm):
+        blender_data = create_default_blender_data()
     mouse_data = {
         'eye_l_h_temp': 0,
         'eye_r_h_temp': 0,
@@ -550,7 +669,50 @@ def main():
             pose_vector_c[1] = math.sin(time.perf_counter() * 1.2)
             pose_vector_c[2] = math.sin(time.perf_counter() * 1.5)
 
+        elif args.osf is not None:
+            try:
+                new_blender_data = blender_data
+                while not client_process.should_terminate.value and not client_process.queue.empty():
+                    new_blender_data = client_process.queue.get_nowait()
+                blender_data = new_blender_data
+            except queue.Empty:
+                pass
+            eyebrow_vector_c = [0.0] * 12
+            mouth_eye_vector_c = [0.0] * 27
+            pose_vector_c = [0.0] * 6
 
+            if len(blender_data)!=0:
+                mouth_eye_vector_c[2] = 1-blender_data['leftEyeOpen']
+                mouth_eye_vector_c[3] = 1-blender_data['rightEyeOpen']
+
+                mouth_eye_vector_c[14] = max(blender_data['MouthOpen'],0)
+                print(mouth_eye_vector_c[14])
+
+                mouth_eye_vector_c[25] = -blender_data['eyeRotationY']*3-(blender_data['rotationX'])/57.3*1.5
+                mouth_eye_vector_c[26] = blender_data['eyeRotationX']*3+(blender_data['rotationY'])/57.3
+                # print(mouth_eye_vector_c[25:27])
+
+                # if pose_vector_0==None:
+                #     pose_vector_0=[0,0,0]
+                #     pose_vector_0[0] = blender_data['rotationX']
+                #     pose_vector_0[1] = blender_data['rotationY']
+                #     pose_vector_0[2] = blender_data['rotationZ']
+                # pose_vector_c[0] = (blender_data['rotationX']-pose_vector_0[0])/57.3*3
+                # pose_vector_c[1] = -(blender_data['rotationY']-pose_vector_0[1])/57.3*3
+                # pose_vector_c[2] = (blender_data['rotationZ']-pose_vector_0[2])/57.3
+                pose_vector_c[0] = (blender_data['rotationX'])/57.3*3
+                pose_vector_c[1] = -(blender_data['rotationY'])/57.3*3
+                pose_vector_c[2] = (blender_data['rotationZ'])/57.3*2
+                # print(pose_vector_c)
+
+                if position_vector_0==None:
+                    position_vector_0=[0,0,0,1]
+                    position_vector_0[0] = blender_data['translationX']
+                    position_vector_0[1] = blender_data['translationY']
+                    position_vector_0[2] = blender_data['translationZ']
+                position_vector[0] = -(blender_data['translationX']-position_vector_0[0])*0.1
+                position_vector[1] = -(blender_data['translationY']-position_vector_0[1])*0.1
+                position_vector[2] = -(blender_data['translationZ']-position_vector_0[2])*0.1
 
         elif args.ifm is not None:
             # get pose from ifm

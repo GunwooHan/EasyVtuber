@@ -161,6 +161,16 @@ https://www.ifacialmocap.com/download/
 购买之前确认好自己的设备支持  
 **不需要下载PC软件**，装好iOS端的软件即可，连接信息通过参数传入Python  
 
+#### OpenSeeFace  
+
+https://github.com/emilianavt/OpenSeeFace/releases  
+直接下载最新版本的Release包并解压  
+之后进入解压目录的Binary文件夹  
+右键编辑`run.bat`，在倒数第二行运行facetracker的命令后加上`--model 4`，切换到模型4可以wink  
+`facetracker -c %cameraNum% -F %fps% -D %dcaps% -v 3 -P 1 --discard-after 0 --scan-every 0 --no-3d-adapt 1 --max-feature-updates 900 --model 4`（仅供参考）  
+之后保存并双击`run.bat`运行，按照提示选择摄像头、分辨率、帧率，捕获正常的话可以看到输出画面  
+最后在启动器中选择OpenSeeFace输入，或添加启动参数`--osf 127.0.0.1:11573`即可接入OpenSeeFace
+
 ## Run
 
 完全体运行命令`python main.py --output_webcam unitycapture --ifm 192.168.31.182:49983 --character test1L2 --extend_movement 1 --output_size 512x512`

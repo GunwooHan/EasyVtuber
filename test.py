@@ -9,6 +9,8 @@
 #     type=ac.ProcessorType.CPU_ACNet,
 # )
 # a.set_arguments(parameters)
+import struct
+
 import cv2
 #
 # img = cv2.imread("character/test41.png")
@@ -90,8 +92,9 @@ import errno
 import time
 import tha2.poser.modes.mode_20_wx
 from tha2.mocap.ifacialmocap_constants import *
+import numpy as np
 
-ifm='192.168.31.182:49983'
+ifm='127.0.0.1:11573'
 
 
 
@@ -103,20 +106,11 @@ class ClientProcess(Process):
         self.address = ifm.split(':')[0]
         self.port = int(ifm.split(':')[1])
         self.perf_time = 0
-        self.ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
+        # self.ifm_converter = tha2.poser.modes.mode_20_wx.create_ifacialmocap_pose_converter()
         self.a_min=None
         self.a_max=None
 
     def run(self):
-
-        udpClntSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-        data = "iFacialMocap_sahuasouryya9218sauhuiayeta91555dy3719"
-
-        data = data.encode('utf-8')
-
-        udpClntSock.sendto(data, (self.address, self.port))
-
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setblocking(False)
         self.socket.bind(("", self.port))
@@ -132,22 +126,90 @@ class ClientProcess(Process):
                     continue
                 else:
                     raise e
-            socket_string = socket_bytes.decode("utf-8")
-            # print(socket_string)
 
+            # socket_string = socket_bytes.decode("utf-8")
+            osf_raw=(struct.unpack('=di2f2fB1f4f3f3f68f136f210f14f',socket_bytes))
+            # print(osf_raw[432:])
+            data={}
+            OpenSeeDataIndex=[
+                'time',
+                'id',
+                'cameraResolutionW',
+                'cameraResolutionH',
+                'rightEyeOpen',
+                'leftEyeOpen',
+                'got3DPoints',
+                'fit3DError',
+                'rawQuaternionX',
+                'rawQuaternionY',
+                'rawQuaternionZ',
+                'rawQuaternionW',
+                'rawEulerX',
+                'rawEulerY',
+                'rawEulerZ',
+                'translationY',
+                'translationX',
+                'translationZ',
+            ]
+            for i in range(len(OpenSeeDataIndex)):
+                data[OpenSeeDataIndex[i]]=osf_raw[i]
+            data['translationY']*=-1
+            data['translationZ']*=-1
+            data['rotationY']=data['rawEulerY']
+            data['rotationX']=(-data['rawEulerX']+180)%360
+            data['rotationZ']=(data['rawEulerZ']-90)
+            OpenSeeFeatureIndex=[
+                'EyeLeft',
+                'EyeRight',
+                'EyebrowSteepnessLeft',
+                'EyebrowUpDownLeft',
+                'EyebrowQuirkLeft',
+                'EyebrowSteepnessRight',
+                'EyebrowUpDownRight',
+                'EyebrowQuirkRight',
+                'MouthCornerUpDownLeft',
+                'MouthCornerInOutLeft',
+                'MouthCornerUpDownRight',
+                'MouthCornerInOutRight',
+                'MouthOpen',
+                'MouthWide'
+            ]
+
+            for i in range(68):
+                data['confidence'+str(i)]=osf_raw[i+18]
+            for i in range(68):
+                data['pointsX'+str(i)]=osf_raw[i*2+18+68]
+                data['pointsY'+str(i)]=osf_raw[i*2+18+68+1]
+            for i in range(70):
+                data['points3DX'+str(i)]=osf_raw[i*3+18+68+68*2]
+                data['points3DY'+str(i)]=osf_raw[i*3+18+68+68*2+1]
+                data['points3DZ'+str(i)]=osf_raw[i*3+18+68+68*2+2]
+
+            for i in range(len(OpenSeeFeatureIndex)):
+                data[OpenSeeFeatureIndex[i]]=osf_raw[i+432]
+            # print(data['rotationX'],data['rotationY'],data['rotationZ'])
+
+            a=np.array([
+                data['points3DX66']-data['points3DX68']+data['points3DX67']-data['points3DX69'],
+                data['points3DY66']-data['points3DY68']+data['points3DY67']-data['points3DY69'],
+                data['points3DZ66']-data['points3DZ68']+data['points3DZ67']-data['points3DZ69']
+            ])
+            a=(a/np.linalg.norm(a))
+            data['eyeRotationX']=a[0]
+            data['eyeRotationY']=a[1]
             # blender_data = json.loads(socket_string)
-            data = self.convert_from_blender_data(socket_string)
-            data=self.ifm_converter.convert(data)
+            # data = self.convert_from_blender_data(socket_string)
+            # data=self.ifm_converter.convert(data)
             # print(data)
-            if(self.a_max is None):
-                self.a_max=[x for x in data]
-            else:
-                self.a_max=[max(data[i],self.a_max[i]) for i in range(len(data))]
-            if(self.a_min is None):
-                self.a_min=[x for x in data]
-            else:
-                self.a_min=[min(data[i],self.a_min[i]) for i in range(len(data))]
-            print([[self.a_min[i],self.a_max[i]] for i in range(len(data))])
+            # if(self.a_max is None):
+            #     self.a_max=[x for x in data]
+            # else:
+            #     self.a_max=[max(data[i],self.a_max[i]) for i in range(len(data))]
+            # if(self.a_min is None):
+            #     self.a_min=[x for x in data]
+            # else:
+            #     self.a_min=[min(data[i],self.a_min[i]) for i in range(len(data))]
+            # print([[self.a_min[i],self.a_max[i]] for i in range(len(data))])
             cur_time = time.perf_counter()
             fps = 1 / (cur_time - self.perf_time)
             self.perf_time = cur_time
