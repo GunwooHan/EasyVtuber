@@ -136,7 +136,7 @@ class OSFClientProcess(Process):
                 data[OpenSeeDataIndex[i]] = osf_raw[i]
             data['translationY'] *= -1
             data['translationZ'] *= -1
-            data['rotationY'] = data['rawEulerY']
+            data['rotationY'] = data['rawEulerY']-10
             data['rotationX'] = (-data['rawEulerX'] + 360)%360-180
             data['rotationZ'] = (data['rawEulerZ'] - 90)
             OpenSeeFeatureIndex = [
@@ -657,17 +657,20 @@ def main():
             mouth_eye_vector_c = [0.0] * 27
             pose_vector_c = [0.0] * 6
 
-            mouth_eye_vector_c[2] = math.sin(time.perf_counter() * 3)
-            mouth_eye_vector_c[3] = math.sin(time.perf_counter() * 3)
+            # mouth_eye_vector_c[2] = math.sin(time.perf_counter() * 3)
+            # mouth_eye_vector_c[3] = math.sin(time.perf_counter() * 3)
+            #
+            # mouth_eye_vector_c[14] = 0
+            #
+            # mouth_eye_vector_c[25] = math.sin(time.perf_counter() * 2.2) * 0.2
+            # mouth_eye_vector_c[26] = math.sin(time.perf_counter() * 3.5) * 0.8
+            #
+            # pose_vector_c[0] = math.sin(time.perf_counter() * 1.1)
+            # pose_vector_c[1] = math.sin(time.perf_counter() * 1.2)
+            # pose_vector_c[2] = math.sin(time.perf_counter() * 1.5)
 
-            mouth_eye_vector_c[14] = 0
-
-            mouth_eye_vector_c[25] = math.sin(time.perf_counter() * 2.2) * 0.2
-            mouth_eye_vector_c[26] = math.sin(time.perf_counter() * 3.5) * 0.8
-
-            pose_vector_c[0] = math.sin(time.perf_counter() * 1.1)
-            pose_vector_c[1] = math.sin(time.perf_counter() * 1.2)
-            pose_vector_c[2] = math.sin(time.perf_counter() * 1.5)
+            eyebrow_vector_c[6]=math.sin(time.perf_counter() * 1.1)
+            eyebrow_vector_c[7]=math.sin(time.perf_counter() * 1.1)
 
         elif args.osf is not None:
             try:
@@ -686,11 +689,14 @@ def main():
                 mouth_eye_vector_c[3] = 1-blender_data['rightEyeOpen']
 
                 mouth_eye_vector_c[14] = max(blender_data['MouthOpen'],0)
-                print(mouth_eye_vector_c[14])
+                # print(mouth_eye_vector_c[14])
 
                 mouth_eye_vector_c[25] = -blender_data['eyeRotationY']*3-(blender_data['rotationX'])/57.3*1.5
                 mouth_eye_vector_c[26] = blender_data['eyeRotationX']*3+(blender_data['rotationY'])/57.3
                 # print(mouth_eye_vector_c[25:27])
+                eyebrow_vector_c[6]=blender_data['EyebrowUpDownLeft']
+                eyebrow_vector_c[7]=blender_data['EyebrowUpDownRight']
+                print(blender_data['EyebrowUpDownLeft'],blender_data['EyebrowUpDownRight'])
 
                 # if pose_vector_0==None:
                 #     pose_vector_0=[0,0,0]
