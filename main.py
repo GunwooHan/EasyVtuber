@@ -696,7 +696,7 @@ def main():
                 # print(mouth_eye_vector_c[25:27])
                 eyebrow_vector_c[6]=blender_data['EyebrowUpDownLeft']
                 eyebrow_vector_c[7]=blender_data['EyebrowUpDownRight']
-                print(blender_data['EyebrowUpDownLeft'],blender_data['EyebrowUpDownRight'])
+                # print(blender_data['EyebrowUpDownLeft'],blender_data['EyebrowUpDownRight'])
 
                 # if pose_vector_0==None:
                 #     pose_vector_0=[0,0,0]
