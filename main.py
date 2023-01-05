@@ -657,17 +657,17 @@ def main():
             mouth_eye_vector_c = [0.0] * 27
             pose_vector_c = [0.0] * 6
 
-            # mouth_eye_vector_c[2] = math.sin(time.perf_counter() * 3)
-            # mouth_eye_vector_c[3] = math.sin(time.perf_counter() * 3)
-            #
-            # mouth_eye_vector_c[14] = 0
-            #
-            # mouth_eye_vector_c[25] = math.sin(time.perf_counter() * 2.2) * 0.2
-            # mouth_eye_vector_c[26] = math.sin(time.perf_counter() * 3.5) * 0.8
-            #
-            # pose_vector_c[0] = math.sin(time.perf_counter() * 1.1)
-            # pose_vector_c[1] = math.sin(time.perf_counter() * 1.2)
-            # pose_vector_c[2] = math.sin(time.perf_counter() * 1.5)
+            mouth_eye_vector_c[2] = math.sin(time.perf_counter() * 3)
+            mouth_eye_vector_c[3] = math.sin(time.perf_counter() * 3)
+
+            mouth_eye_vector_c[14] = 0
+
+            mouth_eye_vector_c[25] = math.sin(time.perf_counter() * 2.2) * 0.2
+            mouth_eye_vector_c[26] = math.sin(time.perf_counter() * 3.5) * 0.8
+
+            pose_vector_c[0] = math.sin(time.perf_counter() * 1.1)
+            pose_vector_c[1] = math.sin(time.perf_counter() * 1.2)
+            pose_vector_c[2] = math.sin(time.perf_counter() * 1.5)
 
             eyebrow_vector_c[6]=math.sin(time.perf_counter() * 1.1)
             eyebrow_vector_c[7]=math.sin(time.perf_counter() * 1.1)
