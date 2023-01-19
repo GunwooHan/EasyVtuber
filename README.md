@@ -1,11 +1,16 @@
 # EasyVtuber
+Language: 
+**`한국어`** 
+[`English`](https://github.com/GunwooHan/EasyVtuber/blob/main/ReadmeEn.md)
+[`简体中文`](https://github.com/GunwooHan/EasyVtuber/blob/main/ReadmeZh.md)
+
+## Introduction
 ![](assets/sample_luda.gif)
 
 - Facial landmark와 GAN을 이용한 Character Face Generation 
 - Google Meets, Zoom 등에서 자신만의 웹툰, 만화 캐릭터로 대화해보세요!
 - 악세사리는 어느정도 추가해도 잘 작동해요!
 - 안타깝게도 RTX 2070 미만에서는 실시간으로 잘 작동하지 않을 수도 있어요 ㅠㅠ
-
 <br/><br/>
 
 ## Demo
