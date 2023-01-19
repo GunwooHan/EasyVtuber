@@ -1,8 +1,8 @@
 # EasyVtuber
 Language: 
 **`简体中文`** 
-[`한국어`](https://github.com/GunwooHan/EasyVtuber/blob/main/Readme.md)
-[`English`](https://github.com/GunwooHan/EasyVtuber/blob/main/ReadmeEn.md)
+[`한국어`](https://github.com/GunwooHan/EasyVtuber/blob/main/README.md)
+[`English`](https://github.com/GunwooHan/EasyVtuber/blob/main/README_EN.md)
 
 ## 介绍
 ![](assets/sample_luda.gif)
