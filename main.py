@@ -10,25 +10,31 @@ import numpy as np
 import mediapipe as mp
 from PIL import Image
 
+from accelerate import Accelerator
 from models import TalkingAnimeLight
 from pose import get_pose
 from utils import preprocessing_image, postprocessing_image
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--debug', action='store_true')
+parser.add_argument('--debug', action='store_true', default=False)
 parser.add_argument('--input', type=str, default='cam')
 parser.add_argument('--character', type=str, default='0001')
 parser.add_argument('--output_dir', type=str, default=f'dst')
 parser.add_argument('--output_webcam', action='store_true')
+parser.add_argument('--fp16', default=False)
 args = parser.parse_args()
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
+accelerator = Accelerator(fp16=args.fp16)
+device = accelerator.device
+
 
 @torch.no_grad()
 def main():
-    model = TalkingAnimeLight().to(device)
+    model = TalkingAnimeLight()
+    model = accelerator.prepare(model)
     model = model.eval()
-    model = model
+
     img = Image.open(f"character/{args.character}.png")
     img = img.resize((256, 256))
     input_image = preprocessing_image(img).unsqueeze(0)
@@ -52,9 +58,10 @@ def main():
     mouth_eye_vector = torch.empty(1, 27)
     pose_vector = torch.empty(1, 3)
 
-    # input_image = input_image.half()
-    # mouth_eye_vector = mouth_eye_vector.half()
-    # pose_vector = pose_vector.half()
+    if args.fp16:
+        input_image = input_image.half()
+        mouth_eye_vector = mouth_eye_vector.half()
+        pose_vector = pose_vector.half()
 
     input_image = input_image.to(device)
     mouth_eye_vector = mouth_eye_vector.to(device)
@@ -120,7 +127,8 @@ def main():
             # cv2.imshow("camera", debug_image)
             cv2.waitKey(1)
         if args.input != 'cam':
-            cv2.imwrite(os.path.join('dst', args.character, args.output_dir, f'{frame_count:04d}.jpeg'))
+            output_frame = cv2.cvtColor(postprocessing_image(output_image.cpu()), cv2.COLOR_RGBA2BGR)
+            cv2.imwrite(os.path.join('dst', args.character, args.output_dir, f'{frame_count:04d}.jpeg'),output_frame)
             frame_count += 1
         if args.output_webcam:
             result_image = np.zeros([720, 1280, 3], dtype=np.uint8)
